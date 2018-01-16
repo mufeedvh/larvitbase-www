@@ -1,0 +1,47 @@
+{
+  "name": "larvitbase-www",
+  "version": "0.1.0",
+  "description": "Website framework based on larvitbase",
+  "main": "index.js",
+  "scripts": {
+    "test": "./node_modules/tape/bin/tape ./test/*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/larvit/larvitbase-www.git"
+  },
+  "keywords": [
+    "http",
+    "www",
+    "rest",
+    "framework"
+  ],
+  "author": {
+    "name": "Mikael 'Lilleman' Göransson",
+    "email": "lilleman@larvit.se",
+    "url": "https://github.com/larvit/larvitbase-www"
+  },
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/larvit/larvitbase-www/issues"
+  },
+  "homepage": "https://github.com/larvit/larvitbase-www#readme",
+  "dependencies": {
+    "ejs": "^2.5.7",
+    "larvitbase": "^2.0.0",
+    "larvitfs": "^2.0.2",
+    "larvitreqparser": "^0.1.0",
+    "larvitrouter": "^2.0.0",
+    "send": "^0.16.1",
+    "winston": "^2.4.0"
+  },
+  "devDependencies": {
+    "async": "^2.6.0",
+    "coveralls": "^3.0.0",
+    "eslint": "^4.13.1",
+    "istanbul": "^0.4.5",
+    "request": "^2.83.0",
+    "tape": "^4.8.0",
+    "tape-eslint": "^1.2.1"
+  }
+}
