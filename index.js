@@ -34,6 +34,7 @@ function App(options) {
 		options.lBaseOptions.middleware	= [];
 	}
 
+	that.compiledTemplates	= {};
 	that.middleware	= options.lBaseOptions.middleware;
 
 	// Instantiate the router
@@ -142,26 +143,37 @@ function App(options) {
 
 	// Render template
 	that.middleware.push(function render(req, res, cb) {
-		if (req.finished) return cb();
+		const	tasks	= [];
 
-		// Output
+		if (req.finished || req.render === false) return cb();
+
 		if ( ! req.routed.templateFullPath) {
-
+			log.verbose(logPrefix + 'No template found. req.routed.templateFullPath is not set.');
+			return cb();
 		}
 
-		var template = ejs.compile(str, options);
-		template(data);
-		// => Rendered HTML string
+		if ( ! that.compiledTemplates[req.routed.templateFullPath]) {
+			log.debug(logPrefix + 'Compiling ' + req.routed.templateFullPath);
+			tasks.push(function (cb) {
+				fs.readFile(req.routed.templateFullPath, function (err, str) {
+					if (err) {
+						log.error(logPrefix + 'Could not read template file');
+						return cb(err);
+					}
 
-		ejs.render(str, data, options);
-		// => Rendered HTML string
+					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(str);
+				});
+			});
+		}
 
-		ejs.renderFile(filename, data, options, function(err, str){
-		    // str => Rendered HTML string
+		async.series(tasks, function (err) {
+			if (err) return cb(err);
+			res.renderedData	= that.compiledTemplates[req.routed.templateFullPath](res.data);
+			res.setHeader('Content-Type', 'application/json; charset=UTF-8');
+			res.end(res.renderedData);
+			req.finished	= true;
+			cb();
 		});
-
-
-		cb();
 	});
 
 	// Output to client

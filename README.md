@@ -8,21 +8,34 @@ Website base framework based on [larvitbase](https://github.com/larvit/larvitbas
 Running the following middlewares:
 
 * [larvitreqparser](https://github.com/larvit/larvitreqparser)
+
     Parse the request, saving request body and more.
+
 * [larvitrouter](https://github.com/larvit/larvitrouter)
+
     Routing the request, the result is saved on req.routed
     This also decides if the response should be rendered, depending on if the URL ends with .json or not.
     Rendering is saved in __req.render__ = true/false
     If the request ends in .json, that is stripped off before it is routed to a controller or template, but NOT a static file.
+
 * [send](https://github.com/pillarjs/send)
+
     Feed a static file as a response, if it is routed and exists.
     If a static file is detected and this middleware is ran; __req.finnished__ is set to true, and no other data should be sent in the respons, not even res.end().
+
 * Run controller
+
     If a controller is found in the routing, the controller will be executed. Read more details on controllers further down. A controller is not mandatory.
+
 * Render template with [ejs](https://github.com/mde/ejs)
+
     Ejs will be feeded with __res.data__ as data and the routed template file as template.
+
 * OR if __req.render__ is false OR if no template is found:
+
     send __res.data__ as a JSON string to the client.
+
+* Run reqparser clean function
 
 ## Installation
 
@@ -72,9 +85,8 @@ Go to http://localhost:8001/ and you'll see the default template being rendered 
 
 doit
 
-**req.render = true** by default och req.render = false ska ge json
+todo: Set appropriate HTML headers
 
-Skriv om att mata static files
 
 Skriv on app.noTargetFound(req, res, cb) {}
 
