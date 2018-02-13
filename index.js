@@ -156,12 +156,16 @@ function App(options) {
 			log.debug(logPrefix + 'Compiling ' + req.routed.templateFullPath);
 			tasks.push(function (cb) {
 				fs.readFile(req.routed.templateFullPath, function (err, str) {
+					let html;
+
 					if (err) {
 						log.error(logPrefix + 'Could not read template file');
 						return cb(err);
 					}
 
-					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(str);
+					html = str.toString();
+					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html);
+					cb();
 				});
 			});
 		}
@@ -169,7 +173,7 @@ function App(options) {
 		async.series(tasks, function (err) {
 			if (err) return cb(err);
 			res.renderedData	= that.compiledTemplates[req.routed.templateFullPath](res.data);
-			res.setHeader('Content-Type', 'application/json; charset=UTF-8');
+			res.setHeader('Content-Type', 'text/html; charset=UTF-8');
 			res.end(res.renderedData);
 			req.finished	= true;
 			cb();
@@ -228,7 +232,7 @@ App.prototype.start = function start(cb) {
 	});
 };
 
-Api.prototype.stop = function (cb) {
+App.prototype.stop = function (cb) {
 	const	that	= this;
 	that.lBase.httpServer.close(cb);
 };
