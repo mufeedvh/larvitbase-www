@@ -6,7 +6,6 @@ const	topLogPrefix = 'larvitbase-www: ./index.js: ',
 	LBase	= require('larvitbase'),
 	async	= require('async'),
 	send	= require('send'),
-	Lfs	= require('larvitfs'),
 	ejs	= require('ejs'),
 	log	= require('winston'),
 	fs	= require('fs');
@@ -22,20 +21,14 @@ function App(options) {
 	that.options	= options;
 
 	if ( ! that.options.routerOptions)	{ that.options.routerOptions	= {};	}
-	if ( ! that.options.routerOptions.controllersPath)	{ that.options.routerOptions.controllersPath	= 'controllers';	}
-	if ( ! that.options.routerOptions.basePath)	{ that.options.routerOptions.basePath	= process.cwd();	}
-	if ( ! Array.isArray(that.options.routerOptions.routes))	{ that.options.routerOptions.routes	= [];	}
+	if ( ! that.options.baseOptions)	{ that.options.baseOptions	= {};	}
 
-	if ( ! that.options.lBaseOptions) {
-		that.options.lBaseOptions	= {};
-	}
-
-	if ( ! Array.isArray(options.lBaseOptions.middleware)) {
-		options.lBaseOptions.middleware	= [];
+	if ( ! Array.isArray(options.baseOptions.middleware)) {
+		options.baseOptions.middleware	= [];
 	}
 
 	that.compiledTemplates	= {};
-	that.middleware	= options.lBaseOptions.middleware;
+	that.middleware	= options.baseOptions.middleware;
 
 	// Instantiate the router
 	that.router	= new Router(that.options.routerOptions);
@@ -62,6 +55,7 @@ function App(options) {
 
 		req.routed	= {};
 
+		// Handle URLs ending in .json
 		if (req.urlParsed.pathname.substring(req.urlParsed.pathname.length - 4) === 'json') {
 			req.render	= false;
 			routeUrl	= req.urlParsed.pathname.substring(0, req.urlParsed.pathname.length - 5);
@@ -208,33 +202,51 @@ function App(options) {
 	});
 };
 
+// Internal server error. 500
 App.prototype.internalError = function internalError(req, res, cb) {
-	req.finished	= true;
 	res.statusCode	= 500;
-	res.end('500 Internal Server Error');
-	cb();
+
+	that.router.resolve('/500', function (err, result) {
+		if ( ! result.templateFullPath) {
+			res.end('500 Internal Server Error');
+			req.finished	= true;
+		} else {
+			req.routed.templateFullPath	= result.templateFullPath;
+		}
+
+		cb();
+	});
 };
 
+// No route target found. 404
 App.prototype.noTargetFound = function noTargetFound(rqe, res, cb) {
-	req.finished	= true;
 	res.statusCode	= 404;
-	res.end('404 Not Found');
-	cb();
+
+	that.router.resolve('/', function (err, result) {
+		if ( ! result.templateFullPath) {
+			res.end('404 Not Found');
+			req.finished	= true;
+		} else {
+			req.routed.templateFullPath	= result.templateFullPath;
+		}
+
+		cb();
+	});
 };
 
 App.prototype.start = function start(cb) {
 	const	that	= this;
 
-	that.lBase	= new LBase(that.options.lBaseOptions, cb);
+	that.base	= new LBase(that.options.baseOptions, cb);
 
-	that.lBase.on('error', function (err, req, res) {
+	that.base.on('error', function (err, req, res) {
 		that.internalError(req, res, cb);
 	});
 };
 
 App.prototype.stop = function (cb) {
 	const	that	= this;
-	that.lBase.httpServer.close(cb);
+	that.base.httpServer.close(cb);
 };
 
 exports = module.exports = App;

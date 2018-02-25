@@ -35,7 +35,7 @@ Running the following middlewares:
 
     send __res.data__ as a JSON string to the client.
 
-* Run reqparser clean function
+* Run reqParser clean function
 
 ## Installation
 
@@ -45,17 +45,17 @@ npm i larvitbase-www
 
 ## Basic usage
 
-In the file index.js:
+### index.js
 
 ```javascript
-const App = require('larvitbase-www');
+const	App	= require('larvitbase-www');
 
-let app;
+let	app;
 
 app = new Api({
-	'lBaseOptions':	{'httpOptions': 8001},	// sent to larvitbase
+	'baseOptions':	{'httpOptions': 8001},	// sent to larvitbase
 	'routerOptions':	{},	// sent to larvitrouter
-	'reqParserOptions': {}, // sent to larvitReqParser
+	'reqParserOptions':	{},	// sent to larvitpeqparser
 });
 
 app.start(function (err) {
@@ -63,35 +63,131 @@ app.start(function (err) {
 });
 
 // Exposed stuff
-//app.lBase	- larvitbase instance
 //app.options	- the options sent in when instanciated
+//app.base	- larvitbase instance
+//app.router	- larvitrouter instance
+//app.reqParser	- larvitreqparser instance
 
-//app.stop() // close httpServer
+// Shorthands
+//app.middleware	shorthand for app.base.middleware and app.options.baseOptions.middleware
 ```
 
-Then just start the file from shell:
+### controllers/default.js
 
-```bash
-node index.js
+```javascript
+'use strict';
+
+exports = module.exports = function controllerDefault(req, res, cb) {
+	res.data.foo	= 'bar';
+	cb();
+}
 ```
+
+### controllers/foo.js
+
+```javascript
+'use strict';
+
+exports = module.exports = function controllerFoo(req, res, cb) {
+	res.data.foo	= 'baz';
+	cb();
+}
+```
+
+### public/templates/default.ejs
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>Default page</title>
+	</head>
+	<body>
+		<h1><%= foo %></h1>
+	</body>
+</html>
+```
+
+### public/templates/foo.ejs
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>Foo page</title>
+	</head>
+	<body>
+		<h1><%= foo %></h1>
+	</body>
+</html>
+```
+
+### public/templates/another.ejs
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>Another page</title>
+	</head>
+	<body>
+		<h1>This page have no controller, just a template</h1>
+	</body>
+</html>
+```
+
+### Summary
 
 This will provide the following:
 
-### Default controller on / (and /default)
+* Default controller on / (and /default)
+  Go to http://localhost:8001/ and you'll see the default template being rendered with the default controller.
+* Foo controller and template will render on /foo
+* Another page will render, without controller on /another
 
-Go to http://localhost:8001/ and you'll see the default template being rendered with the default controller.
+## res.data by default
 
-### Run controllers
+By default res.data is set to an object consisting of:
 
-doit
+* res.data.global	- will always be at least an empty object
+* res.data.global.formFields	- taken directly from req.formFields provided by larvitreqparser
+* res.data.global.urlParsed	-
 
-todo: Set appropriate HTML headers
+## .json paths
 
+If you provide an URL ending in .json and no such static file exists, larvitbase-www will feed res.data as raw JSON to the client.
 
-Skriv on app.noTargetFound(req, res, cb) {}
+For example if you have a controller named __controllers/foo.js__ and you enter the url http://localhost:8001/foo.json in your browser, by default you'll see raw JSON.
 
-Skriv on app.internalError(req, res, cb) {}
+## Skip rendering
 
-Skriv om controllers och templates och vad som händer om en controller inte finns, men en template finns
+If __req.render__ is set to boolean false, it will have the same effect as providing a .json path; res.data will be sent directly to the client as raw JSON.
 
-Skriv om req.finished = true, att den gör så de inbyggda middlewaresen bara passerar utan att göra nåt
+## Stop further execution of middleware, req.finnished
+
+If __req.finnished__ is set to true, the builtin middlewares, including the controller-runner, will be bypassed. This is useful if an error is encountered of if some rate-limiter or other stuff should stop further execution of a request.
+
+## EJS special include()
+
+The EJS instance larvitbase-www is running is patched with a custom include() that uses [larvitfs](https://github.com/larvit/larvitfs) to look for templates.
+
+## 404 and 500; no route found and internal errors
+
+### 404
+
+If no route is found, app.noTargetFound(req, res, cb) is ran. The default noTargetFound() only sets res.statusCode = 404 and writes "404 Not Found" to the client as raw text.
+
+If a template exists named 404 that will be used.
+
+### 500
+
+If a middleware emits an error or something goes wrong in the network stack, app.internalError(req, res, cb) is ran. By default internalError() only sets res.statusCode = 500 and writes "500 Internal Server Error" to the client as raw text.
+
+If a template exists named 500 that will be used.
+
+## Todo
+
+* Set appropriate HTML headers
