@@ -3,118 +3,57 @@
 const	request	= require('request'),
 	async	= require('async'),
 	test	= require('tape'),
-	Api	= require(__dirname + '/../index.js'),
-	fs	= require('fs');
+	App	= require(__dirname + '/../index.js');
+
+test('Start with no options at all', function (t) {
+	const	tasks	= [],
+		app	= new App();
+
+	tasks.push(function (cb) {
+		app.start(cb);
+	});
+
+	// All requests should be 404 by default
+	tasks.push(function (cb) {
+		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
+			if (err) return cb(err);
+			t.equal(response.statusCode,	404);
+			t.equal(body,	'404 Not Found');
+			cb();
+		});
+	});
+
+	// Close server
+	tasks.push(function (cb) {
+		app.stop(cb);
+	});
+
+	async.series(tasks, function (err) {
+		if (err) throw err;
+		t.end();
+	});
+});
 
 test('Get a response from a controller', function (t) {
 	const	tasks	= [];
 
-	let	api;
+	let	app;
 
-	// Initialize api
+	// Initialize app
 	tasks.push(function (cb) {
-		api	= new Api({
-			'routerOptions':	{'basePath': __dirname + '/../test_environment/1'}
+		app = new App({
+			'routerOptions':	{'basePath': __dirname + '/../test_environments/get_a_response_from_a_controller'}
 		});
 		cb();
 	});
 
 	tasks.push(function (cb) {
-		api.start(cb);
+		app.start(cb);
 	});
 
 	// Try 200 request
 	tasks.push(function (cb) {
-		request('http://localhost:' + api.lBase.httpServer.address().port + '/webb', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'{"v": "1.3.2"}');
-			cb();
-		});
-	});
-
-	// Close server
-	tasks.push(function (cb) {
-		api.stop(cb);
-	});
-
-	async.series(tasks, function (err) {
-		if (err) throw err;
-		t.end();
-	});
-});
-
-test('Get a response from a controller, ignoring url parameters', function (t) {
-	const	tasks	= [];
-
-	let	api;
-
-	// Start server
-	tasks.push(function (cb) {
-		api = new Api({
-			'routerOptions':	{'basePath': __dirname + '/../test_environment/1'}
-		});
-
-		cb();
-	});
-
-	tasks.push(function (cb) {
-		api.start(cb);
-	});
-
-	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + api.lBase.httpServer.address().port + '/webb?boll', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'{"v": "1.3.2"}');
-			cb();
-		});
-	});
-
-	// Close server
-	tasks.push(function (cb) {
-		api.stop(cb);
-	});
-
-	async.series(tasks, function (err) {
-		if (err) throw err;
-		t.end();
-	});
-});
-
-test('Get controller without version mappings', function (t) {
-	const	tasks	= [];
-
-	let	api;
-
-	// Start server
-	tasks.push(function (cb) {
-		api = new Api({
-			// To get better test coverage, send in specific middleware array
-			'lBaseOptions': {
-				'middleware':	[]
-			},
-
-			'routerOptions': {
-				'basePath':	__dirname + '/../test_environment/2',
-
-				// We do this explicitly to get better test coverage
-				'controllersPath':	'controllers',
-				'routes':	[]
-			}
-		});
-
-		cb();
-	});
-
-	tasks.push(function (cb) {
-		api.start(cb);
-	});
-
-	// Try 200 request
-	tasks.push(function (cb) {
-		request('http://localhost:' + api.lBase.httpServer.address().port + '/foo', function (err, response, body) {
+		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
 			if (err) return cb(err);
 			t.equal(response.statusCode,	200);
 			t.equal(body,	'{"foo":"bar"}');
@@ -124,7 +63,7 @@ test('Get controller without version mappings', function (t) {
 
 	// Close server
 	tasks.push(function (cb) {
-		api.stop(cb);
+		app.stop(cb);
 	});
 
 	async.series(tasks, function (err) {
@@ -133,148 +72,83 @@ test('Get controller without version mappings', function (t) {
 	});
 });
 
-test('Specific version request', function (t) {
+test('Malfunctioning middleware', function (t) {
 	const	tasks	= [];
 
-	let	api;
+	let	app;
 
-	// Start server
+	// Initialize app
 	tasks.push(function (cb) {
-		api = new Api({
-			'routerOptions':	{'basePath': __dirname + '/../test_environment/1'}
-		});
+		const	options	= {};
+
+		options.baseOptions = {
+			'middleware': [
+				function (req, res, cb) {
+					cb(new Error('boink'));
+				}
+			]
+		};
+
+		app	= new App(options);
 
 		cb();
 	});
 
 	tasks.push(function (cb) {
-		api.start(cb);
+		app.start(cb);
+	});
+
+	// Try 500 request
+	tasks.push(function (cb) {
+		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
+			if (err) return cb(err);
+			t.equal(response.statusCode,	500);
+			t.equal(body,	'500 Internal Server Error');
+			cb();
+		});
+	});
+
+	// Close server
+	tasks.push(function (cb) {
+		app.stop(cb);
+	});
+
+	async.series(tasks, function (err) {
+		if (err) throw err;
+		t.end();
+	});
+});
+
+test('404 with custom template', function (t) {
+	const	tasks	= [];
+
+	let	app;
+
+	// Initialize app
+	tasks.push(function (cb) {
+		app = new App({
+			'routerOptions':	{'basePath': __dirname + '/../test_environments/404_with_custom_template'}
+		});
+		cb();
+	});
+
+	tasks.push(function (cb) {
+		app.start(cb);
 	});
 
 	// Try 200 request
 	tasks.push(function (cb) {
-		request('http://localhost:' + api.lBase.httpServer.address().port + '/0.2/wepp', function (err, response, body) {
+		request('http://localhost:' + app.base.httpServer.address().port + '/nowhere', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'{"v":"0.2.0"}');
+			t.equal(response.statusCode,	404);
+			t.equal(body.trim(),	'There is no page here');
 			cb();
 		});
 	});
 
 	// Close server
 	tasks.push(function (cb) {
-		api.stop(cb);
-	});
-
-	async.series(tasks, function (err) {
-		if (err) throw err;
-		t.end();
-	});
-});
-
-test('Get specific version of README.md', function (t) {
-	const	tasks	= [];
-
-	let	api;
-
-	// Start server
-	tasks.push(function (cb) {
-		api = new Api({
-			'routerOptions':	{'basePath': __dirname + '/../test_environment/1'}
-		});
-
-		cb();
-	});
-
-	tasks.push(function (cb) {
-		api.start(cb);
-	});
-
-	// Try 200 request for README.md
-	tasks.push(function (cb) {
-		request('http://localhost:' + api.lBase.httpServer.address().port + '/0.2/?dal', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'This is old 0.2.0\n');
-			cb();
-		});
-	});
-
-	// Close server
-	tasks.push(function (cb) {
-		api.stop(cb);
-	});
-
-	async.series(tasks, function (err) {
-		if (err) throw err;
-		t.end();
-	});
-});
-
-test('Start without options', function (t) {
-	const	tasks	= [];
-
-	let	api;
-
-	// Start server
-	tasks.push(function (cb) {
-		api = new Api();
-		cb();
-	});
-
-	tasks.push(function (cb) {
-		api.start(cb);
-	});
-
-	// Try 200 request for README.md
-	tasks.push(function (cb) {
-		request('http://localhost:' + api.lBase.httpServer.address().port + '/', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	fs.readFileSync(__dirname + '/../README.md').toString());
-			cb();
-		});
-	});
-
-	// Close server
-	tasks.push(function (cb) {
-		api.stop(cb);
-	});
-
-	async.series(tasks, function (err) {
-		if (err) throw err;
-		t.end();
-	});
-});
-
-test('Start without options or cb', function (t) {
-	const	tasks	= [];
-
-	let	api;
-
-	// Start server
-	tasks.push(function (cb) {
-		api = new Api();
-		cb();
-	});
-
-	tasks.push(function (cb) {
-		api.start(cb);
-	});
-
-	// Try 200 request for README.md
-	tasks.push(function (cb) {
-		request('http://localhost:' + api.lBase.httpServer.address().port + '/', function (err, response, body) {
-			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	fs.readFileSync(__dirname + '/../README.md').toString());
-			cb();
-		});
-	});
-
-	// Close server
-	tasks.push(function (cb) {
-		api.stop(cb);
+		app.stop(cb);
 	});
 
 	async.series(tasks, function (err) {

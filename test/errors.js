@@ -1,4 +1,4 @@
-'use strict';
+/*'use strict';
 
 const	request	= require('request'),
 	async	= require('async'),
@@ -210,3 +210,4 @@ test('500 error when controller data is circular', function (t) {
 		t.end();
 	});
 });
+*/

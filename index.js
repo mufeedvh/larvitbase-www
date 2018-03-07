@@ -1,6 +1,6 @@
 'use strict';
 
-const	topLogPrefix = 'larvitbase-www: ./index.js: ',
+const	topLogPrefix	= 'larvitbase-www: ./index.js: ',
 	ReqParser	= require('larvitreqparser'),
 	Router	= require('larvitrouter'),
 	LBase	= require('larvitbase'),
@@ -11,8 +11,7 @@ const	topLogPrefix = 'larvitbase-www: ./index.js: ',
 	fs	= require('fs');
 
 function App(options) {
-	const	that	= this,
-		logPrefix = topLogPrefix + 'App() - ';
+	const	that	= this;
 
 	if ( ! options) {
 		options	= {};
@@ -23,12 +22,7 @@ function App(options) {
 	if ( ! that.options.routerOptions)	{ that.options.routerOptions	= {};	}
 	if ( ! that.options.baseOptions)	{ that.options.baseOptions	= {};	}
 
-	if ( ! Array.isArray(options.baseOptions.middleware)) {
-		options.baseOptions.middleware	= [];
-	}
-
 	that.compiledTemplates	= {};
-	that.middleware	= options.baseOptions.middleware;
 
 	// Instantiate the router
 	that.router	= new Router(that.options.routerOptions);
@@ -36,202 +30,234 @@ function App(options) {
 	// Instantiate the request parser
 	that.reqParser	= new ReqParser(that.options.reqParserOptions);
 
-	// Parse request
-	that.middleware.push(function parse(req, res, cb) {
-		req.logPrefix = logPrefix + 'req.uuid: ' + req.uuid + ' url: ' + req.url + ' - ';
+	// Only set middleware array if none is provided from the initiator
+	if ( ! Array.isArray(options.baseOptions.middleware)) {
+		options.baseOptions.middleware = [
+			function mwParse(req, res, cb)	{ that.mwParse(req, res, cb);	},
+			function mwRoute(req, res, cb)	{ that.mwRoute(req, res, cb);	},
+			function mwSendStatic(req, res, cb)	{ that.mwSendStatic(req, res, cb);	},
+			function mwRunController(req, res, cb)	{ that.mwRunController(req, res, cb);	},
+			function mwRender(req, res, cb)	{ that.mwRender(req, res, cb);	},
+			function mwSendToClient(req, res, cb)	{ that.mwSendToClient(req, res, cb);	},
+			function mwCleanup(req, res, cb)	{ that.mwCleanup(req, res, cb);	}
+		];
+	}
+};
 
-		if (req.finished) return cb();
+// Internal server error. 500
+App.prototype.internalError = function internalError(req, res) {
+	res.statusCode	= 500;
+	res.end('500 Internal Server Error');
+};
 
-		that.reqParser.parse(req, res, cb);
-	});
+// No route target found. 404
+App.prototype.noTargetFound = function noTargetFound(req, res, cb) {
+	const	that	= this;
 
-	// Route request
-	that.middleware.push(function route(req, res, cb) {
-		const	tasks	= [];
+	res.statusCode	= 404;
 
-		let	routeUrl	= req.urlParsed.pathname;
-
-		if (req.finished) return cb();
-
-		req.routed	= {};
-
-		// Handle URLs ending in .json
-		if (req.urlParsed.pathname.substring(req.urlParsed.pathname.length - 4) === 'json') {
-			req.render	= false;
-			routeUrl	= req.urlParsed.pathname.substring(0, req.urlParsed.pathname.length - 5);
-
-			// Since the URL ends in .json, also check for static files
-			tasks.push(function (cb) {
-				that.router.resolve(req.urlParsed.pathname, function (err, result) {
-					if (err) return cb(err);
-
-					if (result.staticPath) {
-						req.routed.staticPath	= result.staticPath;
-						req.routed.staticFullPath	= result.staticFullPath;
-					}
-
-					cb();
-				});
-			});
+	that.router.resolve('/404', function (err, result) {
+		if ( ! result.templateFullPath) {
+			res.end('404 Not Found');
+			req.finished	= true;
 		} else {
-			req.render	= true;
+			req.routed.controllerPath	= result.controllerPath;
+			req.routed.controllerFullPath	= result.controllerFullPath;
+			req.routed.templatePath	= result.templatePath;
+			req.routed.templateFullPath	= result.templateFullPath;
 		}
 
-		tasks.push(function (cb) {
-			that.router.resolve(routeUrl, function (err, result) {
-				req.routed.controllerPath	= result.controllerPath;
-				req.routed.controllerFullPath	= result.controllerFullPath;
-				req.routed.templatePath	= result.templatePath;
-				req.routed.templateFullPath	= result.templateFullPath;
+		cb();
+	});
+};
 
-				// Do not overwrite the .json file path from above with undefined here
+// Cleanup middleware, removing tmp file storage and more
+App.prototype.mwCleanup = function mwCleanup(req, res, cb) {
+	const	that	= this;
+
+	delete req.finished;
+
+	that.reqParser.clean(req, res, cb);
+};
+
+// Parsing middleware
+App.prototype.mwParse = function mwParse(req, res, cb) {
+	const	that	= this;
+
+	req.logPrefix	= topLogPrefix + 'req.uuid: ' + req.uuid + ' url: ' + req.url + ' - ';
+
+	if (req.finished) return cb();
+
+	that.reqParser.parse(req, res, cb);
+};
+
+// Template rendering middleware
+App.prototype.mwRender = function mwRender(req, res, cb) {
+	const	logPrefix	= req.logPrefix + 'mwRender() - ',
+		tasks	= [],
+		that	= this;
+
+	if (req.finished || req.render === false) return cb();
+
+	if ( ! req.routed.templateFullPath) {
+		log.verbose(logPrefix + 'No template found. req.routed.templateFullPath is not set.');
+		return cb();
+	}
+
+	if ( ! that.compiledTemplates[req.routed.templateFullPath]) {
+		log.debug(logPrefix + 'Compiling template: ' + req.routed.templateFullPath);
+		tasks.push(function (cb) {
+			fs.readFile(req.routed.templateFullPath, function (err, str) {
+				let	html;
+
+				if (err) {
+					log.error(logPrefix + 'Could not read template file');
+					return cb(err);
+				}
+
+				html	= str.toString();
+				that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html);
+				cb();
+			});
+		});
+	}
+
+	async.series(tasks, function (err) {
+		if (err) return cb(err);
+		res.renderedData	= that.compiledTemplates[req.routed.templateFullPath](res.data);
+		cb();
+	});
+};
+
+// Routing middleware
+App.prototype.mwRoute = function mwRoute(req, res, cb) {
+	const	tasks	= [],
+		that	= this;
+
+	let	routeUrl	= req.urlParsed.pathname;
+
+	if (req.finished) return cb();
+
+	req.routed	= {};
+
+	// Handle URLs ending in .json
+	if (req.urlParsed.pathname.substring(req.urlParsed.pathname.length - 4) === 'json') {
+		req.render	= false;
+		routeUrl	= req.urlParsed.pathname.substring(0, req.urlParsed.pathname.length - 5);
+
+		// Since the URL ends in .json, also check for static files
+		tasks.push(function (cb) {
+			that.router.resolve(req.urlParsed.pathname, function (err, result) {
+				if (err) return cb(err);
+
 				if (result.staticPath) {
 					req.routed.staticPath	= result.staticPath;
 					req.routed.staticFullPath	= result.staticFullPath;
 				}
 
-				cb(err);
+				cb();
 			});
 		});
+	} else {
+		req.render	= true;
+	}
 
-		async.parallel(tasks, cb);
-	});
+	tasks.push(function (cb) {
+		that.router.resolve(routeUrl, function (err, result) {
+			req.routed.controllerPath	= result.controllerPath;
+			req.routed.controllerFullPath	= result.controllerFullPath;
+			req.routed.templatePath	= result.templatePath;
+			req.routed.templateFullPath	= result.templateFullPath;
 
-	// Feed static file
-	that.middleware.push(function sendStatic(req, res, cb) {
-		if (req.finished) return cb();
-
-		if (req.routed.staticFullPath) {
-			const	sendStream	= send(req, req.routed.staticFullPath, {'index':	false, 'root': '/'});
-
-			req.finished	= true;
-
-			log.debug(req.logPrefix + 'Static file found, streaming');
-
-			sendStream.pipe(res);
-
-			sendStream.on('error', function (err) {
-				log.warn(req.logPrefix + 'error sending static file to client. err: ' + err.message);
-				return cb(err);
-			});
-
-			sendStream.on('end', cb);
-		} else {
-			return cb();
-		}
-	});
-
-	// Run controller
-	that.middleware.push(function controller(req, res, cb) {
-		if (req.finished) return cb();
-
-		if (req.routed.templateFullPath && ! req.routed.controllerFullPath) {
-			log.debug(req.logPrefix + 'Only template found');
-			return cb();
-		} else if ( ! req.routed.controllerFullPath && ! req.routed.templateFullPath) {
-			that.noTargetFound(req, res, cb);
-		} else { // Must be a controller here
-			require(req.routed.controllerFullPath)(req, res, cb);
-		}
-	});
-
-	// Render template
-	that.middleware.push(function render(req, res, cb) {
-		const	tasks	= [];
-
-		if (req.finished || req.render === false) return cb();
-
-		if ( ! req.routed.templateFullPath) {
-			log.verbose(logPrefix + 'No template found. req.routed.templateFullPath is not set.');
-			return cb();
-		}
-
-		if ( ! that.compiledTemplates[req.routed.templateFullPath]) {
-			log.debug(logPrefix + 'Compiling ' + req.routed.templateFullPath);
-			tasks.push(function (cb) {
-				fs.readFile(req.routed.templateFullPath, function (err, str) {
-					let html;
-
-					if (err) {
-						log.error(logPrefix + 'Could not read template file');
-						return cb(err);
-					}
-
-					html = str.toString();
-					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html);
-					cb();
-				});
-			});
-		}
-
-		async.series(tasks, function (err) {
-			if (err) return cb(err);
-			res.renderedData	= that.compiledTemplates[req.routed.templateFullPath](res.data);
-			res.setHeader('Content-Type', 'text/html; charset=UTF-8');
-			res.end(res.renderedData);
-			req.finished	= true;
-			cb();
-		});
-	});
-
-	// Output to client
-	that.middleware.push(function (req, res, cb) {
-		let	sendData	= res.data;
-
-		if (req.finished) return cb();
-
-		res.setHeader('Content-Type', 'application/json; charset=UTF-8');
-
-		try {
-			if (typeof sendData !== 'string' && ! Buffer.isBuffer(sendData)) {
-				sendData	= JSON.stringify(sendData);
+			// Do not overwrite the .json file path from above with undefined here
+			if (result.staticPath) {
+				req.routed.staticPath	= result.staticPath;
+				req.routed.staticFullPath	= result.staticFullPath;
 			}
-		} catch (err) {
+
+			cb(err);
+		});
+	});
+
+	async.parallel(tasks, cb);
+};
+
+// Controller running middleware
+App.prototype.mwRunController = function mwRunController(req, res, cb) {
+	const	logPrefix	= req.logPrefix + 'mwRunController() - ',
+		that	= this;
+
+	if (req.finished) return cb();
+
+	if (req.routed.templateFullPath && ! req.routed.controllerFullPath) {
+		log.debug(logPrefix + 'Only template found');
+		return cb();
+	} else if ( ! req.routed.controllerFullPath && ! req.routed.templateFullPath) {
+		log.debug(logPrefix + 'Either controller nor template found for given url, running that.noTargetFound()');
+		that.noTargetFound(req, res, cb);
+	} else { // Must be a controller here
+		log.debug(logPrefix + 'Controller found, running');
+		require(req.routed.controllerFullPath)(req, res, cb);
+	}
+};
+
+// Send static files middleware
+App.prototype.mwSendStatic = function mwSendStatic(req, res, cb) {
+	const	logPrefix	= req.logPrefix + 'mwSendStatic() - ';
+
+	if (req.finished) return cb();
+
+	if (req.routed.staticFullPath) {
+		const	sendStream	= send(req, req.routed.staticFullPath, {'index':	false, 'root': '/'});
+
+		req.finished	= true;
+
+		log.debug(logPrefix + 'Static file found, streaming');
+
+		sendStream.pipe(res);
+
+		sendStream.on('error', function (err) {
+			log.warn(logPrefix + 'error sending static file to client. err: ' + err.message);
 			return cb(err);
-		}
+		});
 
-		res.end(sendData);
-		cb();
-	});
-
-	// Clean up if file storage is used by parser
-	that.middleware.push(function cleanup(req, res, cb) {
-		delete req.finished;
-
-		that.reqParser.clean(req, res, cb);
-	});
+		sendStream.on('end', cb);
+	} else {
+		return cb();
+	}
 };
 
-// Internal server error. 500
-App.prototype.internalError = function internalError(req, res, cb) {
-	res.statusCode	= 500;
+// Middleware for sending data to client
+App.prototype.mwSendToClient = function mwSendToClient(req, res, cb) {
+	const	logPrefix	= req.logPrefix + 'mwSendToClient() - ';
 
-	that.router.resolve('/500', function (err, result) {
-		if ( ! result.templateFullPath) {
-			res.end('500 Internal Server Error');
-			req.finished	= true;
-		} else {
-			req.routed.templateFullPath	= result.templateFullPath;
+	let	sendData	= res.data;
+
+	if (req.finished) return cb();
+
+	// Rendered data means HTML, send as string to the client
+	if (res.renderedData) {
+		res.setHeader('Content-Type', 'text/html; charset=UTF-8');
+		res.end(res.renderedData);
+		req.finished	= true;
+		return cb();
+	}
+
+	// If no rendered data exists, send res.data as stringified JSON to the client
+	res.setHeader('Content-Type', 'application/json; charset=UTF-8');
+
+	try {
+		if (typeof sendData !== 'string' && ! Buffer.isBuffer(sendData)) {
+			sendData	= JSON.stringify(sendData);
 		}
+	} catch (err) {
+		log.warn(logPrefix + 'Could not stringify sendData. err: ' + err.message);
+		return cb(err);
+	}
 
-		cb();
-	});
-};
-
-// No route target found. 404
-App.prototype.noTargetFound = function noTargetFound(rqe, res, cb) {
-	res.statusCode	= 404;
-
-	that.router.resolve('/', function (err, result) {
-		if ( ! result.templateFullPath) {
-			res.end('404 Not Found');
-			req.finished	= true;
-		} else {
-			req.routed.templateFullPath	= result.templateFullPath;
-		}
-
-		cb();
-	});
+	res.end(sendData);
+	req.finished	= true;
+	cb();
 };
 
 App.prototype.start = function start(cb) {
@@ -240,7 +266,7 @@ App.prototype.start = function start(cb) {
 	that.base	= new LBase(that.options.baseOptions, cb);
 
 	that.base.on('error', function (err, req, res) {
-		that.internalError(req, res, cb);
+		that.internalError(req, res);
 	});
 };
 
