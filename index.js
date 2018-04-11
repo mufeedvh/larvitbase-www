@@ -42,6 +42,9 @@ function App(options) {
 			function mwCleanup(req, res, cb)	{ that.mwCleanup(req, res, cb);	}
 		];
 	}
+
+	// Expose middlewares more convenient
+	that.middleware	= options.baseOptions.middleware;
 };
 
 // Internal server error. 500
@@ -111,7 +114,7 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 				let	html;
 
 				if (err) {
-					log.error(logPrefix + 'Could not read template file');
+					log.error(logPrefix + 'Could not read template file. err: ' + err.message);
 					return cb(err);
 				}
 
@@ -131,17 +134,35 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 
 // Routing middleware
 App.prototype.mwRoute = function mwRoute(req, res, cb) {
-	const	tasks	= [],
+	const	logPrefix	= req.logPrefix + 'mwRoute() - ',
+		tasks	= [],
 		that	= this;
 
-	let	routeUrl	= req.urlParsed.pathname;
+	let	routeUrl;
 
 	if (req.finished) return cb();
 
+	if ( ! req.urlParsed) {
+		const	err	= new Error('req.urlParsed is not set');
+		log.error(logPrefix + err.message);
+		log.verbose(err.stack);
+		return cb(err);
+	}
+
+	routeUrl	= req.urlParsed.pathname;
 	req.routed	= {};
+
+	// Explicitly route / to default when we resolv files
+	if (routeUrl.split('?')[0] === '/') {
+		routeUrl	= '/default';
+	} else if (routeUrl.split('?')[0] === '/.json') {
+		routeUrl	= '/default.json';
+	}
 
 	// Handle URLs ending in .json
 	if (req.urlParsed.pathname.substring(req.urlParsed.pathname.length - 4) === 'json') {
+		log.debug(logPrefix + 'url ends in json, use some custom route options');
+
 		req.render	= false;
 		routeUrl	= req.urlParsed.pathname.substring(0, req.urlParsed.pathname.length - 5);
 
@@ -162,6 +183,7 @@ App.prototype.mwRoute = function mwRoute(req, res, cb) {
 		req.render	= true;
 	}
 
+	// Resolve stuff with the router
 	tasks.push(function (cb) {
 		that.router.resolve(routeUrl, function (err, result) {
 			req.routed.controllerPath	= result.controllerPath;
