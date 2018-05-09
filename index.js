@@ -1,14 +1,19 @@
 'use strict';
 
-const	topLogPrefix	= 'larvitbase-www: ./index.js: ',
+const	lfsInstances	= {},
+	topLogPrefix	= 'larvitbase-www: ./index.js: ',
 	ReqParser	= require('larvitreqparser'),
 	Router	= require('larvitrouter'),
 	LBase	= require('larvitbase'),
 	async	= require('async'),
 	send	= require('send'),
+	path	= require('path'),
+	Lfs	= require('larvitfs'),
 	ejs	= require('ejs'),
 	log	= require('winston'),
 	fs	= require('fs');
+
+ejs.includeFile_org	= ejs.includeFile;
 
 function App(options) {
 	const	that	= this;
@@ -109,6 +114,40 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 
 	if ( ! that.compiledTemplates[req.routed.templateFullPath]) {
 		log.debug(logPrefix + 'Compiling template: ' + req.routed.templateFullPath);
+
+		// Custom ejs includeFile that uses larvitfs to search through node_modules for templates
+		ejs.includeFile = function (filePath, options) {
+			let	tmplDir	= path.parse(req.routed.templateFullPath).dir,
+				filePathAbsolute;
+
+			if (filePath.substring(1) === '/') {
+				return ejs.includeFile_org(filePath, options);
+			}
+
+			// Remove the template-part of the tmplDir
+			tmplDir	= tmplDir.substring(0, tmplDir.length - that.router.options.templatesPath.length);
+
+			if ( ! lfsInstances[tmplDir]) {
+				lfsInstances[tmplDir]	= new Lfs({'basePath': tmplDir});
+			}
+
+			filePathAbsolute	= lfsInstances[tmplDir].getPathSync(that.router.options.templatesPath + '/' + filePath);
+
+			// Try with the extensions passed to the router
+			if ( ! filePathAbsolute && that.router && that.router.options && Array.isArray(that.router.options.templateExts)) {
+				for (const ext of that.router.options.templateExts) {
+					filePathAbsolute	= lfsInstances[tmplDir].getPathSync(that.router.options.templatesPath + '/' + filePath + '.' + ext);
+					if (filePathAbsolute) break;
+				}
+			}
+
+			if ( ! filePathAbsolute) {
+				throw new Error('Can not find template matching "' + filePath + '"');
+			}
+
+			return ejs.includeFile_org(filePathAbsolute, options);
+		};
+
 		tasks.push(function (cb) {
 			fs.readFile(req.routed.templateFullPath, function (err, str) {
 				let	html;
