@@ -120,7 +120,7 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 			let	tmplDir	= path.parse(req.routed.templateFullPath).dir,
 				filePathAbsolute;
 
-			if (filePath.substring(1) === '/') {
+			if (filePath.substring(0, 1) === '/') {
 				return ejs.includeFile_org(filePath, options);
 			}
 

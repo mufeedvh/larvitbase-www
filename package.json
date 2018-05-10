@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/larvit/larvitbase-www#readme",
   "dependencies": {
-    "ejs": "^2.5.7",
+    "ejs": "git+https://github.com/larvit/ejs.git#24ea30276fdfa64737985e58031b6f3b4981b1e5",
     "larvitbase": "^2.0.0",
     "larvitfs": "^2.0.2",
     "larvitreqparser": "^0.1.0",
