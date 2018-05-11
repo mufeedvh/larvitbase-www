@@ -158,7 +158,14 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 				}
 
 				html	= str.toString();
-				that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html);
+
+				try {
+					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html);
+				} catch (err) {
+					log.error(logPrefix + 'Could not compile "' + req.routed.templateFullPath + '", err: ' + err.message);
+					return cb(err);
+				}
+
 				cb();
 			});
 		});
@@ -166,7 +173,12 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 
 	async.series(tasks, function (err) {
 		if (err) return cb(err);
-		res.renderedData	= that.compiledTemplates[req.routed.templateFullPath](res.data);
+		try {
+			res.renderedData	= that.compiledTemplates[req.routed.templateFullPath](res.data);
+		} catch (err) {
+			log.error(logPrefix + 'Could not render "' + req.routed.templateFullPath + '", err: ' + err.message);
+			return cb(err);
+		}
 		cb();
 	});
 };
@@ -225,6 +237,8 @@ App.prototype.mwRoute = function mwRoute(req, res, cb) {
 	// Resolve stuff with the router
 	tasks.push(function (cb) {
 		that.router.resolve(routeUrl, function (err, result) {
+			if (err) return cb(err);
+
 			req.routed.controllerPath	= result.controllerPath;
 			req.routed.controllerFullPath	= result.controllerFullPath;
 			req.routed.templatePath	= result.templatePath;
