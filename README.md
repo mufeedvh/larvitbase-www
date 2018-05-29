@@ -21,7 +21,7 @@ Running the following middlewares:
 * [send](https://github.com/pillarjs/send)
 
     Feed a static file as a response, if it is routed and exists.
-    If a static file is detected and this middleware is ran; __req.finnished__ is set to true, and no other data should be sent in the respons, not even res.end().
+    If a static file is detected and this middleware is ran; __req.finished__ is set to true, and no other data should be sent in the respons, not even res.end().
 
 * Run controller
 
@@ -52,7 +52,7 @@ const	App	= require('larvitbase-www');
 
 let	app;
 
-app = new Api({
+app = new App({
 	'baseOptions':	{'httpOptions': 8001},	// sent to larvitbase
 	'routerOptions':	{},	// sent to larvitrouter
 	'reqParserOptions':	{},	// sent to larvitpeqparser
@@ -78,7 +78,7 @@ app.start(function (err) {
 'use strict';
 
 exports = module.exports = function controllerDefault(req, res, cb) {
-	res.data.foo	= 'bar';
+	res.data = { foo: 'bar' };
 	cb();
 }
 ```
@@ -166,9 +166,9 @@ For example if you have a controller named __controllers/foo.js__ and you enter 
 
 If __req.render__ is set to boolean false, it will have the same effect as providing a .json path; res.data will be sent directly to the client as raw JSON.
 
-## Stop further execution of middleware, req.finnished
+## Stop further execution of middleware, req.finished
 
-If __req.finnished__ is set to true, the builtin middlewares, including the controller-runner, will be bypassed. This is useful if an error is encountered of if some rate-limiter or other stuff should stop further execution of a request.
+If __req.finished__ is set to true, the builtin middlewares, including the controller-runner, will be bypassed. This is useful if an error is encountered of if some rate-limiter or other stuff should stop further execution of a request.
 
 ## EJS special include()
 
