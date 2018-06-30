@@ -283,7 +283,7 @@ App.prototype.mwSendStatic = function mwSendStatic(req, res, cb) {
 	if (req.finished) return cb();
 
 	if (req.routed.staticFullPath) {
-		const	sendStream	= send(req, req.routed.staticFullPath, {'index':	false, 'root': '/'});
+		const	sendStream	= send(req, req.routed.staticFullPath, {'index':	false});
 
 		req.finished	= true;
 
