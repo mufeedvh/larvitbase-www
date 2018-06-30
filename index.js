@@ -338,11 +338,13 @@ App.prototype.mwSendToClient = function mwSendToClient(req, res, cb) {
 App.prototype.start = function start(cb) {
 	const	that	= this;
 
-	that.base	= new LBase(that.options.baseOptions, cb);
+	that.base	= new LBase(that.options.baseOptions);
 
 	that.base.on('error', function (err, req, res) {
 		that.internalError(req, res);
 	});
+
+	that.base.start(cb);
 };
 
 App.prototype.stop = function (cb) {

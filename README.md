@@ -69,7 +69,7 @@ app.start(function (err) {
 //app.reqParser	- larvitreqparser instance
 
 // Shorthands
-//app.middleware	shorthand for app.base.middleware and app.options.baseOptions.middleware
+//app.middlewares	shorthand for app.base.middlewares and app.options.baseOptions.middlewares
 ```
 
 ### controllers/default.js
