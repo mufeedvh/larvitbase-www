@@ -33,7 +33,7 @@
     "larvitreqparser": "^0.1.0",
     "larvitrouter": "^2.0.0",
     "send": "^0.16.1",
-    "winston": "^2.4.0"
+    "winston": "^3.0.0"
   },
   "devDependencies": {
     "async": "2.6.1",
