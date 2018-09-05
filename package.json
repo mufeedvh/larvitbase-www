@@ -31,7 +31,7 @@
     "larvitbase": "^3.0.0",
     "larvitfs": "^2.0.2",
     "larvitreqparser": "^0.2.0",
-    "larvitrouter": "^2.0.0",
+    "larvitrouter": "^3.0.0",
     "send": "^0.16.1",
     "winston": "^3.0.0"
   },
