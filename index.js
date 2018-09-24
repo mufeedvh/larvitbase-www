@@ -125,18 +125,18 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 			}
 
 			// Remove the template-part of the tmplDir
-			tmplDir	= tmplDir.substring(0, tmplDir.length - that.router.options.templatesPath.length);
+			tmplDir	= tmplDir.substring(0, tmplDir.length - that.router.options.paths.template.path.length);
 
 			if ( ! lfsInstances[tmplDir]) {
 				lfsInstances[tmplDir]	= new Lfs({'basePath': tmplDir});
 			}
 
-			filePathAbsolute	= lfsInstances[tmplDir].getPathSync(that.router.options.templatesPath + '/' + filePath);
+			filePathAbsolute	= lfsInstances[tmplDir].getPathSync(that.router.options.paths.template.path + '/' + filePath);
 
 			// Try with the extensions passed to the router
-			if ( ! filePathAbsolute && that.router && that.router.options && Array.isArray(that.router.options.templateExts)) {
-				for (const ext of that.router.options.templateExts) {
-					filePathAbsolute	= lfsInstances[tmplDir].getPathSync(that.router.options.templatesPath + '/' + filePath + '.' + ext);
+			if ( ! filePathAbsolute && that.router && that.router.options && Array.isArray(that.router.options.paths.template.exts)) {
+				for (const ext of that.router.options.paths.template.exts) {
+					filePathAbsolute	= lfsInstances[tmplDir].getPathSync(that.router.options.paths.template.path + '/' + filePath + '.' + ext);
 					if (filePathAbsolute) break;
 				}
 			}
