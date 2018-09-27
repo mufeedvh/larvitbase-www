@@ -13,7 +13,7 @@ const	lfsInstances	= {},
 	log	= require('winston'),
 	fs	= require('fs');
 
-ejs.includeFile_org	= ejs.includeFile;
+// ejs.includeFile_org	= ejs.includeFile;
 
 function App(options) {
 	const	that	= this;
@@ -111,53 +111,104 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 		log.verbose(logPrefix + 'No template found. req.routed.templateFullPath is not set.');
 		return cb();
 	}
-
-	if ( ! that.compiledTemplates[req.routed.templateFullPath]) {
-		log.debug(logPrefix + 'Compiling template: ' + req.routed.templateFullPath);
-
-		// Custom ejs includeFile that uses larvitfs to search through node_modules for templates
-		ejs.includeFile = function (filePath, options) {
-			let	tmplDir	= path.parse(req.routed.templateFullPath).dir,
-				filePathAbsolute;
-
-			if (filePath.substring(0, 1) === '/') {
-				return ejs.includeFile_org(filePath, options);
+	
+	function compile(dir, fileName, includeList, cb) {
+		if(dir && fileName) {
+			let	filePathAbsolute;
+			
+			if (fileName.substring(0, 1) === '/') {
+				filePathAbsolute = path.join(dir, that.router.options.paths.template.path, fileName);
 			}
-
-			// Remove the template-part of the tmplDir
-			tmplDir	= tmplDir.substring(0, tmplDir.length - that.router.options.paths.template.path.length);
-
-			if ( ! lfsInstances[tmplDir]) {
-				lfsInstances[tmplDir]	= new Lfs({'basePath': tmplDir});
-			}
-
-			filePathAbsolute	= lfsInstances[tmplDir].getPathSync(that.router.options.paths.template.path + '/' + filePath);
-
+			
 			// Try with the extensions passed to the router
-			if ( ! filePathAbsolute && that.router && that.router.options && Array.isArray(that.router.options.paths.template.exts)) {
+			if (! filePathAbsolute && that.router && that.router.options && Array.isArray(that.router.options.paths.template.exts)) {
 				for (const ext of that.router.options.paths.template.exts) {
-					filePathAbsolute	= lfsInstances[tmplDir].getPathSync(that.router.options.paths.template.path + '/' + filePath + '.' + ext);
+					filePathAbsolute	= lfsInstances[dir].getPathSync(that.router.options.paths.template.path + '/' + fileName + '.' + ext);
 					if (filePathAbsolute) break;
 				}
 			}
-
-			if ( ! filePathAbsolute) {
-				throw new Error('Can not find template matching "' + filePath + '"');
+			if(! filePathAbsolute) {
+				return cb(new Error('File not found. path provided: ' + dir + ' fileName provided: ' + fileName), null);
 			}
+			
+			if(fs.access(filePathAbsolute, fs.constants.F_OK, function (err) {
+				if(err) return cb(err, null);
+				
+				fs.readFile(filePathAbsolute, 'utf-8', function (err, fileText) {
+					if (err) return cb(err, null);
+					
+					let	includes = fileText.match(/<%-\s*include\s*(.*?)\s*%>/g);
 
-			return ejs.includeFile_org(filePathAbsolute, options);
-		};
+					if(! includes) return cb(null, fileText);
+					
+					if(! includeList) includeList = [];
+
+					if(includeList.indexOf(filePathAbsolute) !== - 1) {
+						// There seems to be a circular include, return error.
+						return cb(new Error('File ' + includeList[0] + ' causes a circular include call. ' + includeList[includeList.length - 1] + ' calls ' + filePathAbsolute + ' again.'), null);
+					}
+
+					includeList.push(filePathAbsolute);
+
+					const	subTasks = [];
+
+					includes.forEach(function (regx) {
+						subTasks.push(function (cb) {
+							let	includeFile = /<%-\s*include\('(.*?)'/g.exec(regx), includeArgs;
+							
+							if(! includeFile) return cb();
+
+							includeArgs = /{(.*?)}/.exec(regx);
+							
+							compile(dir, includeFile[1].substring(0, (includeFile[1].indexOf('.') === - 1 ? includeFile[1].length : includeFile[1].indexOf('.'))), includeList, function (err, html) {
+								if(err) return cb(err);
+
+								if(includeArgs) {
+									let	replaceArgs = html.match(/<%=([^)]+?)\%>/gm), args = JSON.parse(includeArgs[0].replace(/'/g, '"'));
+									if(args) {
+										replaceArgs.forEach(function (repArg) {
+											let	argKey = /<%=\s*(.*?)s*%>/.exec(repArg)[1], arg = args[argKey.trim()];
+
+											if(arg) html = html.replace(repArg, arg);
+										});
+									}
+								}
+
+								fileText = fileText.replace(regx.toString(), html);
+								return cb();
+							});
+						});
+					});
+
+					async.parallel(subTasks, function (err) {
+						if (err) return cb(err);
+						cb(null, fileText);
+					});
+				});
+			}));
+		}
+	};
+
+	if (! that.compiledTemplates[req.routed.templateFullPath]) {
+		log.debug(logPrefix + 'Compiling template: ' + req.routed.templateFullPath);
+	
+		let	tmplDir = path.parse(req.routed.templateFullPath).dir, fileName = req.routed.templateFullPath.substring(tmplDir.length);
+
+		tmplDir = tmplDir.substring(0, tmplDir.length - that.router.options.paths.template.path.length);
+
+		if (! lfsInstances[tmplDir]) {
+			lfsInstances[tmplDir]	= new Lfs({'basePath': tmplDir});
+		}
 
 		tasks.push(function (cb) {
-			fs.readFile(req.routed.templateFullPath, function (err, str) {
+			compile(tmplDir, fileName, null, function (err, result) {
 				let	html;
 
-				if (err) {
+				if(err) {
 					log.error(logPrefix + 'Could not read template file. err: ' + err.message);
 					return cb(err);
 				}
-
-				html	= str.toString();
+				html	= result.toString();
 
 				try {
 					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html);
