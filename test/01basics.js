@@ -717,3 +717,117 @@ test('Fail to compile template, but do not crash', function (t) {
 		t.end();
 	});
 });
+
+test('Fail when rendering page due to circular includes', function (t) {
+	const	tasks	= [];
+
+	let	app;
+
+	// Initialize app
+	tasks.push(function (cb) {
+		app = new App({
+			'routerOptions':	{'basePath': __dirname + '/../test_environments/templates_in_modules'}
+		});
+		cb();
+	});
+
+	tasks.push(function (cb) {
+		app.start(cb);
+	});
+
+	// Try 200 request
+	tasks.push(function (cb) {
+		request('http://localhost:' + app.base.httpServer.address().port + '/bah', function (err, response, body) {
+			if (err) return cb(err);
+			t.equal(response.statusCode,	500);
+			t.equal(body,	'500 Internal Server Error');
+			cb();
+		});
+	});
+
+	// Close server
+	tasks.push(function (cb) {
+		app.stop(cb);
+	});
+
+	async.series(tasks, function (err) {
+		if (err) throw err;
+		t.end();
+	});
+});
+
+test('Fail when parsing arguments for include, but do not crash', function (t) {
+	const	tasks	= [];
+
+	let	app;
+
+	// Initialize app
+	tasks.push(function (cb) {
+		app = new App({
+			'routerOptions':	{'basePath': __dirname + '/../test_environments/templates_in_modules'}
+		});
+		cb();
+	});
+
+	tasks.push(function (cb) {
+		app.start(cb);
+	});
+
+	// Try 200 request
+	tasks.push(function (cb) {
+		request('http://localhost:' + app.base.httpServer.address().port + '/ass', function (err, response, body) {
+			if (err) return cb(err);
+			t.equal(response.statusCode,	500);
+			t.equal(body,	'500 Internal Server Error');
+			cb();
+		});
+	});
+
+	// Close server
+	tasks.push(function (cb) {
+		app.stop(cb);
+	});
+
+	async.series(tasks, function (err) {
+		if (err) throw err;
+		t.end();
+	});
+});
+
+test('Render page with included files containing dots in the file name', function (t) {
+	const	tasks	= [];
+
+	let	app;
+
+	// Initialize app
+	tasks.push(function (cb) {
+		app = new App({
+			'routerOptions':	{'basePath': __dirname + '/../test_environments/templates_in_modules'}
+		});
+		cb();
+	});
+
+	tasks.push(function (cb) {
+		app.start(cb);
+	});
+
+	// Try 200 request
+	tasks.push(function (cb) {
+		request('http://localhost:' + app.base.httpServer.address().port + '/asd', function (err, response, body) {
+			if (err) return cb(err);
+			t.equal(response.statusCode,	200);
+			t.equal(body,	'<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t<title>Base</title>\n</head>\n\n\t<body>\n\t\t<h1>skabb</h1>\n\n\t</body>\n</html>\n');
+			cb();
+		});
+	});
+
+	// Close server
+	tasks.push(function (cb) {
+		app.stop(cb);
+	});
+
+	async.series(tasks, function (err) {
+		if (err) throw err;
+		t.end();
+	});
+});

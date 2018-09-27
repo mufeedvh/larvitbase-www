@@ -154,23 +154,30 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 
 					includes.forEach(function (regx) {
 						subTasks.push(function (cb) {
-							let	includeFile = /<%-\s*include\('(.*?)'/g.exec(regx), includeArgs;
+							let	includeFile = /<%-\s*include\('(.*?)'/g.exec(regx),
+								includeArgs;
 							
 							if(! includeFile) return cb();
 
 							includeArgs = /{(.*?)}/.exec(regx);
 							
-							compile(dir, includeFile[1].substring(0, (includeFile[1].indexOf('.') === - 1 ? includeFile[1].length : includeFile[1].indexOf('.'))), includeList, function (err, html) {
+							compile(dir, includeFile[1].substring(0, (includeFile[1].indexOf('.') === - 1 ? includeFile[1].length : includeFile[1].lastIndexOf('.'))), includeList, function (err, html) {
 								if(err) return cb(err);
 
 								if(includeArgs) {
-									let	replaceArgs = html.match(/<%=([^)]+?)\%>/gm), args = JSON.parse(includeArgs[0].replace(/'/g, '"'));
-									if(args) {
-										replaceArgs.forEach(function (repArg) {
-											let	argKey = /<%=\s*(.*?)s*%>/.exec(repArg)[1], arg = args[argKey.trim()];
+									try {
+										let	replaceArgs = html.match(/<%=([^)]+?)\%>/gm), 
+											args = JSON.parse(includeArgs[0].replace(/'/g, '"'));
+										if(args) {
+											replaceArgs.forEach(function (repArg) {
+												let	argKey = /<%=\s*(.*?)s*%>/.exec(repArg)[1], 
+													arg = args[argKey.trim()];
 
-											if(arg) html = html.replace(repArg, arg);
-										});
+												if(arg) html = html.replace(repArg, arg);
+											});
+										}
+									} catch(err) {
+										return cb(err);
 									}
 								}
 
