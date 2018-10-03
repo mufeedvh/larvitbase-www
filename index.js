@@ -11,7 +11,8 @@ const	lfsInstances	= {},
 	Lfs	= require('larvitfs'),
 	ejs	= require('ejs'),
 	log	= require('winston'),
-	fs	= require('fs');
+	fs	= require('fs'),
+	_	= require('lodash');
 
 ejs.includeFile_org	= ejs.includeFile;
 
@@ -160,7 +161,10 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 				html	= str.toString();
 
 				try {
-					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html);
+					const options = {};
+					options.outputFunctionName	= 'print';
+
+					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html, options);
 				} catch (err) {
 					log.error(logPrefix + 'Could not compile "' + req.routed.templateFullPath + '", err: ' + err.message);
 					return cb(err);
@@ -174,7 +178,10 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 	async.series(tasks, function (err) {
 		if (err) return cb(err);
 		try {
-			res.renderedData	= that.compiledTemplates[req.routed.templateFullPath](res.data);
+			const renderObject	= {};
+			renderObject._	= _;
+			renderObject.data = res.data;
+			res.renderedData	= that.compiledTemplates[req.routed.templateFullPath](renderObject);
 		} catch (err) {
 			log.error(logPrefix + 'Could not render "' + req.routed.templateFullPath + '", err: ' + err.message);
 			return cb(err);
