@@ -32,9 +32,9 @@
     "larvitfs": "^2.0.2",
     "larvitreqparser": "^0.2.0",
     "larvitrouter": "^3.0.0",
+    "larvitutils": "^2.1.0",
     "lodash": "^4.17.11",
-    "send": "^0.16.1",
-    "winston": "^3.0.0"
+    "send": "^0.16.1"
   },
   "devDependencies": {
     "async": "2.6.1",
