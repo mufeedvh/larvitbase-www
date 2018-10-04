@@ -5,13 +5,14 @@ const	lfsInstances	= {},
 	ReqParser	= require('larvitreqparser'),
 	Router	= require('larvitrouter'),
 	LBase	= require('larvitbase'),
+	LUtils	= require('larvitutils'),
 	async	= require('async'),
 	send	= require('send'),
 	path	= require('path'),
 	Lfs	= require('larvitfs'),
 	ejs	= require('ejs'),
-	log	= require('winston'),
-	fs	= require('fs');
+	fs	= require('fs'),
+	_	= require('lodash');
 
 // ejs.includeFile_org	= ejs.includeFile;
 
@@ -23,6 +24,13 @@ function App(options) {
 	}
 
 	that.options	= options;
+
+	if ( ! that.options.log) {
+		const	lUtils	= new LUtils();
+		that.options.log	= new lUtils.Log();
+	}
+
+	that.log	= that.options.log;
 
 	if ( ! that.options.routerOptions)	{ that.options.routerOptions	= {};	}
 	if ( ! that.options.baseOptions)	{ that.options.baseOptions	= {};	}
@@ -108,7 +116,7 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 	if (req.finished || req.render === false) return cb();
 
 	if ( ! req.routed.templateFullPath) {
-		log.verbose(logPrefix + 'No template found. req.routed.templateFullPath is not set.');
+		that.log.verbose(logPrefix + 'No template found. req.routed.templateFullPath is not set.');
 		return cb();
 	}
 	
@@ -199,7 +207,7 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 	};
 
 	if (! that.compiledTemplates[req.routed.templateFullPath]) {
-		log.debug(logPrefix + 'Compiling template: ' + req.routed.templateFullPath);
+		that.log.debug(logPrefix + 'Compiling template: ' + req.routed.templateFullPath);
 
 		let	rootDir	= req.routed.templateFullPath.substring(0, req.routed.templateFullPath.indexOf(that.router.options.paths.template.path)), 
 			fileName = req.routed.templateFullPath.substring(rootDir.length + that.router.options.paths.template.path.length);
@@ -221,16 +229,19 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 			compile(rootDir, fileName, null, function (err, result) {
 				let	html;
 
-				if(err) {
-					log.error(logPrefix + 'Could not read template file. err: ' + err.message);
+				if (err) {
+					that.log.error(logPrefix + 'Could not read template file. err: ' + err.message);
 					return cb(err);
 				}
 				html	= result.toString();
 
 				try {
-					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html);
+					const options = {};
+					options.outputFunctionName	= 'print';
+
+					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html, options);
 				} catch (err) {
-					log.error(logPrefix + 'Could not compile "' + req.routed.templateFullPath + '", err: ' + err.message);
+					that.log.error(logPrefix + 'Could not compile "' + req.routed.templateFullPath + '", err: ' + err.message);
 					return cb(err);
 				}
 
@@ -242,9 +253,12 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 	async.series(tasks, function (err) {
 		if (err) return cb(err);
 		try {
-			res.renderedData	= that.compiledTemplates[req.routed.templateFullPath](res.data);
+			const renderObject	= {};
+			renderObject._	= _;
+			renderObject.data = res.data;
+			res.renderedData	= that.compiledTemplates[req.routed.templateFullPath](renderObject);
 		} catch (err) {
-			log.error(logPrefix + 'Could not render "' + req.routed.templateFullPath + '", err: ' + err.message);
+			that.log.error(logPrefix + 'Could not render "' + req.routed.templateFullPath + '", err: ' + err.message);
 			return cb(err);
 		}
 		cb();
@@ -263,8 +277,8 @@ App.prototype.mwRoute = function mwRoute(req, res, cb) {
 
 	if ( ! req.urlParsed) {
 		const	err	= new Error('req.urlParsed is not set');
-		log.error(logPrefix + err.message);
-		log.verbose(err.stack);
+		that.log.error(logPrefix + err.message);
+		that.log.verbose(err.stack);
 		return cb(err);
 	}
 
@@ -280,7 +294,7 @@ App.prototype.mwRoute = function mwRoute(req, res, cb) {
 
 	// Handle URLs ending in .json
 	if (req.urlParsed.pathname.substring(req.urlParsed.pathname.length - 4) === 'json') {
-		log.debug(logPrefix + 'url ends in json, use some custom route options');
+		that.log.debug(logPrefix + 'url ends in json, use some custom route options');
 
 		req.render	= false;
 		routeUrl	= req.urlParsed.pathname.substring(0, req.urlParsed.pathname.length - 5);
@@ -333,20 +347,21 @@ App.prototype.mwRunController = function mwRunController(req, res, cb) {
 	if (req.finished) return cb();
 
 	if (req.routed.templateFullPath && ! req.routed.controllerFullPath) {
-		log.debug(logPrefix + 'Only template found');
+		that.log.debug(logPrefix + 'Only template found');
 		return cb();
 	} else if ( ! req.routed.controllerFullPath && ! req.routed.templateFullPath) {
-		log.debug(logPrefix + 'Either controller nor template found for given url, running that.noTargetFound()');
+		that.log.debug(logPrefix + 'Either controller nor template found for given url, running that.noTargetFound()');
 		that.noTargetFound(req, res, cb);
 	} else { // Must be a controller here
-		log.debug(logPrefix + 'Controller found, running');
+		that.log.debug(logPrefix + 'Controller found, running');
 		require(req.routed.controllerFullPath)(req, res, cb);
 	}
 };
 
 // Send static files middleware
 App.prototype.mwSendStatic = function mwSendStatic(req, res, cb) {
-	const	logPrefix	= req.logPrefix + 'mwSendStatic() - ';
+	const	logPrefix	= req.logPrefix + 'mwSendStatic() - ',
+		that	= this;
 
 	if (req.finished) return cb();
 
@@ -355,12 +370,12 @@ App.prototype.mwSendStatic = function mwSendStatic(req, res, cb) {
 
 		req.finished	= true;
 
-		log.debug(logPrefix + 'Static file found, streaming');
+		that.log.debug(logPrefix + 'Static file found, streaming');
 
 		sendStream.pipe(res);
 
 		sendStream.on('error', function (err) {
-			log.warn(logPrefix + 'error sending static file to client. err: ' + err.message);
+			that.log.warn(logPrefix + 'error sending static file to client. err: ' + err.message);
 			return cb(err);
 		});
 
@@ -372,7 +387,8 @@ App.prototype.mwSendStatic = function mwSendStatic(req, res, cb) {
 
 // Middleware for sending data to client
 App.prototype.mwSendToClient = function mwSendToClient(req, res, cb) {
-	const	logPrefix	= req.logPrefix + 'mwSendToClient() - ';
+	const	logPrefix	= req.logPrefix + 'mwSendToClient() - ',
+		that	= this;
 
 	let	sendData	= res.data;
 
@@ -394,7 +410,7 @@ App.prototype.mwSendToClient = function mwSendToClient(req, res, cb) {
 			sendData	= JSON.stringify(sendData);
 		}
 	} catch (err) {
-		log.warn(logPrefix + 'Could not stringify sendData. err: ' + err.message);
+		that.log.warn(logPrefix + 'Could not stringify sendData. err: ' + err.message);
 		return cb(err);
 	}
 
