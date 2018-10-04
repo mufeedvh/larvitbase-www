@@ -193,22 +193,32 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 					});
 				});
 			}));
+		} else {
+			cb(new Error('File not found'));
 		}
 	};
 
 	if (! that.compiledTemplates[req.routed.templateFullPath]) {
 		log.debug(logPrefix + 'Compiling template: ' + req.routed.templateFullPath);
+
+		let	rootDir	= req.routed.templateFullPath.substring(0, req.routed.templateFullPath.indexOf(that.router.options.paths.template.path)), 
+			fileName = req.routed.templateFullPath.substring(rootDir.length + that.router.options.paths.template.path.length);
+
+		//rootDir = rootDir.substring(0, rootDir.length - that.router.options.paths.template.path.length);
+
 	
-		let	tmplDir = path.parse(req.routed.templateFullPath).dir, fileName = req.routed.templateFullPath.substring(tmplDir.length);
+		/*let rootDir	= req.routed.templateFullPath.substring(0, req.routed.templateFullPath.indexOf(that.router.options.paths.template.path) - 1),
+			fileName = req.routed.templateFullPath.substring(rootDir.length + that.router.options.paths.template.path.length + 1);*/
+		//let	tmplDir = path.parse(req.routed.templateFullPath).dir, fileName = req.routed.templateFullPath.substring(tmplDir.length);
 
-		tmplDir = tmplDir.substring(0, tmplDir.length - that.router.options.paths.template.path.length);
+		//tmplDir = tmplDir.substring(0, tmplDir.length - that.router.options.paths.template.path.length);
 
-		if (! lfsInstances[tmplDir]) {
-			lfsInstances[tmplDir]	= new Lfs({'basePath': tmplDir});
+		if (! lfsInstances[rootDir]) {
+			lfsInstances[rootDir]	= new Lfs({'basePath': rootDir});
 		}
 
 		tasks.push(function (cb) {
-			compile(tmplDir, fileName, null, function (err, result) {
+			compile(rootDir, fileName, null, function (err, result) {
 				let	html;
 
 				if(err) {

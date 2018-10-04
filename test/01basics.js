@@ -831,3 +831,41 @@ test('Render page with included files containing dots in the file name', functio
 		t.end();
 	});
 });
+
+test('Render page when templates in subfolders uses includes', function (t) {
+	const	tasks	= [];
+
+	let	app;
+
+	// Initialize app
+	tasks.push(function (cb) {
+		app = new App({
+			'routerOptions':	{'basePath': __dirname + '/../test_environments/includes'}
+		});
+		cb();
+	});
+
+	tasks.push(function (cb) {
+		app.start(cb);
+	});
+
+	// Try 200 request
+	tasks.push(function (cb) {
+		request('http://localhost:' + app.base.httpServer.address().port + '/test/untz', function (err, response, body) {
+			if (err) return cb(err);
+			t.equal(response.statusCode,	200);
+			t.equal(body,	'<html>\n    <head><title>test</title></head>\n    <body>\n        <h1>This should be visible</h1>\n    </body>\n</html>');
+			cb();
+		});
+	});
+
+	// Close server
+	tasks.push(function (cb) {
+		app.stop(cb);
+	});
+
+	async.series(tasks, function (err) {
+		if (err) throw err;
+		t.end();
+	});
+});
