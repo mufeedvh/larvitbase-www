@@ -1,7 +1,6 @@
 'use strict';
 
-const	lfsInstances	= {},
-	topLogPrefix	= 'larvitbase-www: ./index.js: ',
+const	topLogPrefix	= 'larvitbase-www: ./index.js: ',
 	ReqParser	= require('larvitreqparser'),
 	Router	= require('larvitrouter'),
 	LBase	= require('larvitbase'),
@@ -9,12 +8,13 @@ const	lfsInstances	= {},
 	async	= require('async'),
 	send	= require('send'),
 	path	= require('path'),
-	Lfs	= require('larvitfs'),
 	ejs	= require('ejs'),
 	fs	= require('fs'),
 	_	= require('lodash');
 
-// ejs.includeFile_org	= ejs.includeFile;
+ejs.includeFile_org	= ejs.includeFile;
+
+ejs.resolveInclude_org	= ejs.resolveInclude;
 
 function App(options) {
 	const	that	= this;
@@ -32,8 +32,12 @@ function App(options) {
 
 	that.log	= that.options.log;
 
-	if ( ! that.options.routerOptions)	{ that.options.routerOptions	= {};	}
-	if ( ! that.options.baseOptions)	{ that.options.baseOptions	= {};	}
+	if (! that.options.routerOptions)	that.options.routerOptions	= {};
+	if (! that.options.routerOptions.log)	that.options.routerOptions.log	= that.log;
+	if (! that.options.baseOptions)	that.options.baseOptions	= {};
+	if (! that.options.baseOptions.log)	that.options.baseOptions.log	= that.log;
+	if (! that.options.reqParserOptions)	that.options.reqParserOptions	= {};
+	if (! that.options.reqParserOptions.log)	that.options.reqParserOptions.log	= that.log;
 
 	that.compiledTemplates	= {};
 
@@ -119,127 +123,73 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 		that.log.verbose(logPrefix + 'No template found. req.routed.templateFullPath is not set.');
 		return cb();
 	}
-	
-	function compile(dir, fileName, includeList, cb) {
-		if(dir && fileName) {
-			let	filePathAbsolute;
-			
-			if (fileName.substring(0, 1) === '/') {
-				filePathAbsolute = path.join(dir, that.router.options.paths.template.path, fileName);
-			}
-			
-			// Try with the extensions passed to the router
-			if (! filePathAbsolute && that.router && that.router.options && Array.isArray(that.router.options.paths.template.exts)) {
-				for (const ext of that.router.options.paths.template.exts) {
-					filePathAbsolute	= lfsInstances[dir].getPathSync(that.router.options.paths.template.path + '/' + fileName + '.' + ext);
-					if (filePathAbsolute) break;
-				}
-			}
-			if(! filePathAbsolute) {
-				return cb(new Error('File not found. path provided: ' + dir + ' fileName provided: ' + fileName), null);
-			}
-			
-			if(fs.access(filePathAbsolute, fs.constants.F_OK, function (err) {
-				if(err) return cb(err, null);
-				
-				fs.readFile(filePathAbsolute, 'utf-8', function (err, fileText) {
-					if (err) return cb(err, null);
-					
-					let	includes = fileText.match(/<%-\s*include\s*(.*?)\s*%>/g);
-
-					if(! includes) return cb(null, fileText);
-					
-					if(! includeList) includeList = [];
-
-					if(includeList.indexOf(filePathAbsolute) !== - 1) {
-						// There seems to be a circular include, return error.
-						return cb(new Error('File ' + includeList[0] + ' causes a circular include call. ' + includeList[includeList.length - 1] + ' calls ' + filePathAbsolute + ' again.'), null);
-					}
-
-					includeList.push(filePathAbsolute);
-
-					const	subTasks = [];
-
-					includes.forEach(function (regx) {
-						subTasks.push(function (cb) {
-							let	includeFile = /<%-\s*include\('(.*?)'/g.exec(regx),
-								includeArgs;
-							
-							if(! includeFile) return cb();
-
-							includeArgs = /{(.*?)}/.exec(regx);
-							
-							compile(dir, includeFile[1].substring(0, (includeFile[1].indexOf('.') === - 1 ? includeFile[1].length : includeFile[1].lastIndexOf('.'))), includeList, function (err, html) {
-								if(err) return cb(err);
-
-								if(includeArgs) {
-									try {
-										let	replaceArgs = html.match(/<%=([^)]+?)\%>/gm), 
-											args = JSON.parse(includeArgs[0].replace(/'/g, '"'));
-										if(args) {
-											replaceArgs.forEach(function (repArg) {
-												let	argKey = /<%=\s*(.*?)s*%>/.exec(repArg)[1], 
-													arg = args[argKey.trim()];
-
-												if(arg) html = html.replace(repArg, arg);
-											});
-										}
-									} catch(err) {
-										return cb(err);
-									}
-								}
-
-								fileText = fileText.replace(regx.toString(), html);
-								return cb();
-							});
-						});
-					});
-
-					async.parallel(subTasks, function (err) {
-						if (err) return cb(err);
-						cb(null, fileText);
-					});
-				});
-			}));
-		} else {
-			cb(new Error('File not found'));
-		}
-	};
 
 	if (! that.compiledTemplates[req.routed.templateFullPath]) {
 		that.log.debug(logPrefix + 'Compiling template: ' + req.routed.templateFullPath);
 
-		let	rootDir	= req.routed.templateFullPath.substring(0, req.routed.templateFullPath.indexOf(that.router.options.paths.template.path)), 
-			fileName = req.routed.templateFullPath.substring(rootDir.length + that.router.options.paths.template.path.length);
+		// Custom ejs resolveInclude to resolve path based on larvitfs
+		/* This should be the winning solution, but it did not seem to work
+		ejs.resolveInclude = function (filePath, options) {
+			const	parsedFilePath	= path.parse(filePath);
 
-		//rootDir = rootDir.substring(0, rootDir.length - that.router.options.paths.template.path.length);
+			let	returnStr;
 
-	
-		/*let rootDir	= req.routed.templateFullPath.substring(0, req.routed.templateFullPath.indexOf(that.router.options.paths.template.path) - 1),
-			fileName = req.routed.templateFullPath.substring(rootDir.length + that.router.options.paths.template.path.length + 1);*/
-		//let	tmplDir = path.parse(req.routed.templateFullPath).dir, fileName = req.routed.templateFullPath.substring(tmplDir.length);
+			// If absolute path, we do not need to do anything extra, just run the default ejs.resolveInclude()
+			if (filePath.substring(0, 1) === '/') {
+				return ejs.resolveInclude_org(filePath, options);
+			}
 
-		//tmplDir = tmplDir.substring(0, tmplDir.length - that.router.options.paths.template.path.length);
+			returnStr	= ejs.resolveInclude_org(filePath, options);
+			//ejs.resolveInclude	= ejs.resolveInclude_org;
 
-		if (! lfsInstances[rootDir]) {
-			lfsInstances[rootDir]	= new Lfs({'basePath': rootDir});
-		}
+			return returnStr;
+		};
+		*/
 
+		// Custom ejs includeFile that uses larvitfs to search through node_modules for templates
+		ejs.includeFile = function (filePath, options) {
+			const	routerBasePath	= path.resolve(that.router.options.basePath),
+				relativePath	= path.parse(req.routed.templateFullPath).dir.substring(routerBasePath.length + 1),
+				routerLfs	= that.router.options.lfs;
+
+			let	filePathAbsolute;
+
+			// If absolute path, we do not need to do anything extra, just run the default ejs.includeFile()
+			if (filePath.substring(0, 1) === '/') {
+				return ejs.includeFile_org(filePath, options);
+			}
+
+			filePathAbsolute	= routerLfs.getPathSync(relativePath + '/' + filePath);
+
+			// Try with the extensions passed to the router
+			if ( ! filePathAbsolute && that.router && that.router.options && Array.isArray(that.router.options.paths.template.exts)) {
+				for (const ext of that.router.options.paths.template.exts) {
+					filePathAbsolute	= routerLfs.getPathSync(relativePath + '/' + filePath + '.' + ext);
+					if (filePathAbsolute) break;
+				}
+			}
+
+			if ( ! filePathAbsolute) {
+				throw new Error('Can not find template matching "' + filePath + '"');
+			}
+
+			return ejs.includeFile_org(filePathAbsolute, options);
+		};
+
+		// Compile the template
 		tasks.push(function (cb) {
-			compile(rootDir, fileName, null, function (err, result) {
+			fs.readFile(req.routed.templateFullPath, function (err, str) {
 				let	html;
 
 				if (err) {
 					that.log.error(logPrefix + 'Could not read template file. err: ' + err.message);
 					return cb(err);
 				}
-				html	= result.toString();
+
+				html	= str.toString();
 
 				try {
-					const options = {};
-					options.outputFunctionName	= 'print';
-
-					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html, options);
+					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html);
 				} catch (err) {
 					that.log.error(logPrefix + 'Could not compile "' + req.routed.templateFullPath + '", err: ' + err.message);
 					return cb(err);
@@ -253,9 +203,10 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 	async.series(tasks, function (err) {
 		if (err) return cb(err);
 		try {
-			const renderObject	= {};
+			const	renderObject	= {};
+
 			renderObject._	= _;
-			renderObject.data = res.data;
+			renderObject.data	= res.data;
 			res.renderedData	= that.compiledTemplates[req.routed.templateFullPath](renderObject);
 		} catch (err) {
 			that.log.error(logPrefix + 'Could not render "' + req.routed.templateFullPath + '", err: ' + err.message);

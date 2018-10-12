@@ -1,8 +1,11 @@
 'use strict';
 
 const	request	= require('request'),
+	LUtils	= require('larvitutils'),
+	lUtils	= new LUtils(),
 	async	= require('async'),
 	test	= require('tape'),
+	log	= new lUtils.Log('no logging'),
 	App	= require(__dirname + '/../index.js');
 
 test('Malfunctioning middleware', function (t) {
@@ -13,6 +16,8 @@ test('Malfunctioning middleware', function (t) {
 	// Initialize app
 	tasks.push(function (cb) {
 		const	options	= {};
+
+		options.log	= log;
 
 		options.baseOptions = {
 			'middleware': [
