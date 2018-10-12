@@ -602,7 +602,7 @@ test('Render page where templates are in modules', function (t) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/foo', function (err, response, body) {
 			if (err) return cb(err);
 			t.equal(response.statusCode,	200);
-			t.equal(body,	'<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t<title>Base</title>\n</head>\n\n\t<body>\n\t\t<h1>skabb</h1>\n\n\t</body>\n</html>\n');
+			t.equal(body,	'<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t<title>Base</title>\n</head>\n\n\t<body>\n\t\t<h1>skabb</h1>\n<p>Giant squirrel</p>\n\t</body>\n</html>\n');
 			cb();
 		});
 	});
@@ -836,7 +836,7 @@ test('Render page with included files containing dots in the file name', functio
 		request('http://localhost:' + app.base.httpServer.address().port + '/asd', function (err, response, body) {
 			if (err) return cb(err);
 			t.equal(response.statusCode,	200);
-			t.equal(body,	'<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t<title>Base</title>\n</head>\n\n\t<body>\n\t\t<h1>skabb</h1>\n\n\t</body>\n</html>\n');
+			t.equal(body,	'<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t<title>Base</title>\n</head>\n\n\t<body>\n\t\t<h1>skabb</h1>\n<p>Giant squirrel</p>\n\t</body>\n</html>\n');
 			cb();
 		});
 	});

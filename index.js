@@ -149,10 +149,32 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 		// Custom ejs includeFile that uses larvitfs to search through node_modules for templates
 		ejs.includeFile = function (filePath, options) {
 			const	routerBasePath	= path.resolve(that.router.options.basePath),
-				relativePath	= path.parse(req.routed.templateFullPath).dir.substring(routerBasePath.length + 1),
 				routerLfs	= that.router.options.lfs;
 
-			let	filePathAbsolute;
+			let	filePathAbsolute,
+				relativePath;
+
+			// First deduct the routers base path from the file in which this function is ran on
+
+			if (options.filename) {
+				relativePath	= options.filename.substring(routerBasePath.length + 1);
+
+				// Remove possible node_modules/xxx
+				const pathParts	= relativePath.split('/');
+
+				relativePath	= '';
+				for (let i = 0; pathParts[i] !== undefined; i ++) {
+					if (pathParts[i] === 'node_modules') {
+						i ++;
+					} else {
+						if (pathParts[i + 1]) {
+							relativePath += pathParts[i] + '/';
+						}
+					}
+				}
+			}	else {
+				relativePath	= path.parse(req.routed.templateFullPath).dir.substring(routerBasePath.length + 1);
+			}
 
 			// If absolute path, we do not need to do anything extra, just run the default ejs.includeFile()
 			if (filePath.substring(0, 1) === '/') {
