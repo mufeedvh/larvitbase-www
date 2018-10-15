@@ -256,7 +256,7 @@ test('Use print function', function (t) {
 	tasks.push(function (cb) {
 		app = new App({
 			'routerOptions':	{'basePath': __dirname + '/../test_environments/simple_app'},
-			'log':	new lUtils.Log('verbose')
+			'log':	log
 		});
 		cb();
 	});
@@ -914,7 +914,7 @@ test('Render page when templates in subfolders uses includes', function (t) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/test/untz', function (err, response, body) {
 			if (err) return cb(err);
 			t.equal(response.statusCode,	200);
-			t.equal(body,	'<html>\n\t<head><title>test</title></head>\n\t<body>\n\t\t<h1>This should be visible</h1>\n\t</body>\n</html>');
+			t.equal(body,	'<html>\n\t<head><title>test</title></head>\n\t<body>\n\t\t<h1>This should be visible</h1>\n<p>boo</p>\n\t\t<p>torsk</p>\n\t</body>\n</html>');
 			cb();
 		});
 	});

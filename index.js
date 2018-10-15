@@ -176,8 +176,6 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 		return ejs.includeFile_org(filePathAbsolute, options);
 	};
 
-
-
 	if (! that.compiledTemplates[req.routed.templateFullPath]) {
 		that.log.debug(logPrefix + 'Compiling template: ' + req.routed.templateFullPath);
 
