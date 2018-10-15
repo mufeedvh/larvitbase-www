@@ -201,6 +201,8 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 		// Compile the template
 		tasks.push(function (cb) {
 			fs.readFile(req.routed.templateFullPath, function (err, str) {
+				const	compileOpts	= {'outputFunctionName': 'print'};
+
 				let	html;
 
 				if (err) {
@@ -211,7 +213,7 @@ App.prototype.mwRender = function mwRender(req, res, cb) {
 				html	= str.toString();
 
 				try {
-					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html);
+					that.compiledTemplates[req.routed.templateFullPath]	= ejs.compile(html, compileOpts);
 				} catch (err) {
 					that.log.error(logPrefix + 'Could not compile "' + req.routed.templateFullPath + '", err: ' + err.message);
 					return cb(err);

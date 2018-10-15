@@ -247,6 +247,45 @@ test('Render a template (without controller)', function (t) {
 	});
 });
 
+test('Use print function', function (t) {
+	const	tasks	= [];
+
+	let	app;
+
+	// Initialize app
+	tasks.push(function (cb) {
+		app = new App({
+			'routerOptions':	{'basePath': __dirname + '/../test_environments/simple_app'},
+			'log':	new lUtils.Log('verbose')
+		});
+		cb();
+	});
+
+	tasks.push(function (cb) {
+		app.start(cb);
+	});
+
+	// Try 200 request
+	tasks.push(function (cb) {
+		request('http://localhost:' + app.base.httpServer.address().port + '/foo', function (err, response, body) {
+			if (err) return cb(err);
+			t.equal(response.statusCode,	200);
+			t.equal(body,	'<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Foo</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello Foo!</h1>\n\t\t<p>yass</p>\n\t</body>\n</html>\n');
+			cb();
+		});
+	});
+
+	// Close server
+	tasks.push(function (cb) {
+		app.stop(cb);
+	});
+
+	async.series(tasks, function (err) {
+		if (err) throw err;
+		t.end();
+	});
+});
+
 test('Fail gracefully if fetching template from disk fails', function (t) {
 	const	tasks	= [];
 
