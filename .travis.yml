@@ -3,8 +3,8 @@ language: node_js
 node_js:
     - 6
     - 8
-    - 9
     - 10
+    - 11
 
 script: node_modules/.bin/istanbul cover node_modules/.bin/tape ./test/*
 
