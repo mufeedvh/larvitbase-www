@@ -28,11 +28,11 @@
   "homepage": "https://github.com/larvit/larvitbase-www#readme",
   "dependencies": {
     "ejs": "git+https://github.com/larvit/ejs.git#24ea30276fdfa64737985e58031b6f3b4981b1e5",
-    "larvitbase": "^3.1.2",
-    "larvitfs": "^2.0.2",
-    "larvitreqparser": "^0.4.1",
-    "larvitrouter": "^3.0.0",
-    "larvitutils": "^2.1.0",
+    "larvitbase": "^3.1.3",
+    "larvitfs": "^2.3.1",
+    "larvitreqparser": "^0.4.4",
+    "larvitrouter": "^3.0.1",
+    "larvitutils": "^2.1.1",
     "lodash": "^4.17.11",
     "send": "^0.16.1"
   },
