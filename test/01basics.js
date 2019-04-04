@@ -1,16 +1,16 @@
 'use strict';
 
-const	request	= require('request'),
-	LUtils	= require('larvitutils'),
-	lUtils	= new LUtils(),
-	async	= require('async'),
-	test	= require('tape'),
-	log	= new lUtils.Log('no logging'),
-	App	= require(__dirname + '/../index.js');
+const request = require('request');
+const LUtils = require('larvitutils');
+const lUtils = new LUtils();
+const async = require('async');
+const test = require('tape');
+const log = new lUtils.Log('no logging');
+const App = require(__dirname + '/../index.js');
 
 test('Start with no options at all', function (t) {
-	const	tasks	= [],
-		app	= new App();
+	const tasks = [];
+	const app = new App();
 
 	tasks.push(function (cb) {
 		app.start(cb);
@@ -20,8 +20,8 @@ test('Start with no options at all', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	404);
-			t.equal(body,	'404 Not Found');
+			t.equal(response.statusCode, 404);
+			t.equal(body, '404 Not Found');
 			cb();
 		});
 	});
@@ -38,15 +38,15 @@ test('Start with no options at all', function (t) {
 });
 
 test('Get a response from a controller', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/get_a_response_from_a_controller'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/get_a_response_from_a_controller'},
+			log: log
 		});
 		cb();
 	});
@@ -59,8 +59,8 @@ test('Get a response from a controller', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'{"foo":"bar"}');
+			t.equal(response.statusCode, 200);
+			t.equal(body, '{"foo":"bar"}');
 			cb();
 		});
 	});
@@ -77,15 +77,15 @@ test('Get a response from a controller', function (t) {
 });
 
 test('Get a response from a controller on /.json', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/get_a_response_from_a_controller'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/get_a_response_from_a_controller'},
+			log: log
 		});
 		cb();
 	});
@@ -98,8 +98,8 @@ test('Get a response from a controller on /.json', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/.json', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'{"foo":"bar"}');
+			t.equal(response.statusCode, 200);
+			t.equal(body, '{"foo":"bar"}');
 			cb();
 		});
 	});
@@ -116,15 +116,15 @@ test('Get a response from a controller on /.json', function (t) {
 });
 
 test('404 with custom template', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/404_with_custom_template'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/404_with_custom_template'},
+			log: log
 		});
 		cb();
 	});
@@ -137,8 +137,8 @@ test('404 with custom template', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/nowhere', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	404);
-			t.equal(body.trim(),	'There is no page here');
+			t.equal(response.statusCode, 404);
+			t.equal(body.trim(), 'There is no page here');
 			cb();
 		});
 	});
@@ -155,17 +155,17 @@ test('404 with custom template', function (t) {
 });
 
 test('Finish a request early', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
-		app = new App({'log': log});
+		app = new App({log: log});
 
 		// Inject custom middleware first that finishes the request early
 		app.middleware.splice(0, 0, function (req, res, cb) {
-			req.finished	= true;
+			req.finished = true;
 			res.end('bosse');
 			cb();
 		});
@@ -181,8 +181,8 @@ test('Finish a request early', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'bosse');
+			t.equal(response.statusCode, 200);
+			t.equal(body, 'bosse');
 			cb();
 		});
 	});
@@ -199,15 +199,15 @@ test('Finish a request early', function (t) {
 });
 
 test('Render a template (without controller)', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/simple_app'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/simple_app'},
+			log: log
 		});
 		cb();
 	});
@@ -220,8 +220,8 @@ test('Render a template (without controller)', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Base</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello World!</h1>\n\t</body>\n</html>\n');
+			t.equal(response.statusCode, 200);
+			t.equal(body, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Base</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello World!</h1>\n\t</body>\n</html>\n');
 			cb();
 		});
 	});
@@ -230,8 +230,8 @@ test('Render a template (without controller)', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Base</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello World!</h1>\n\t</body>\n</html>\n');
+			t.equal(response.statusCode, 200);
+			t.equal(body, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Base</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello World!</h1>\n\t</body>\n</html>\n');
 			cb();
 		});
 	});
@@ -248,15 +248,15 @@ test('Render a template (without controller)', function (t) {
 });
 
 test('Use print function', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/simple_app'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/simple_app'},
+			log: log
 		});
 		cb();
 	});
@@ -269,8 +269,8 @@ test('Use print function', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/foo', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Foo</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello Foo!</h1>\n\t\t<p>yass</p>\n\t</body>\n</html>\n');
+			t.equal(response.statusCode, 200);
+			t.equal(body, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t\t<title>Foo</title>\n\t</head>\n\t<body>\n\t\t<h1>Hello Foo!</h1>\n\t\t<p>yass</p>\n\t</body>\n</html>\n');
 			cb();
 		});
 	});
@@ -287,20 +287,20 @@ test('Use print function', function (t) {
 });
 
 test('Fail gracefully if fetching template from disk fails', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/simple_app'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/simple_app'},
+			log: log
 		});
 
 		// Inject middleware to screw with routed templates to trigger the error we are after
 		app.middleware.splice(2, 0, function (req, res, cb) {
-			req.routed.templateFullPath	= '/somewhere/that/does/not/exist.tmpl';
+			req.routed.templateFullPath = '/somewhere/that/does/not/exist.tmpl';
 			cb();
 		});
 
@@ -315,8 +315,8 @@ test('Fail gracefully if fetching template from disk fails', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/foo', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	500);
-			t.equal(body,	'500 Internal Server Error');
+			t.equal(response.statusCode, 500);
+			t.equal(body, '500 Internal Server Error');
 			cb();
 		});
 	});
@@ -334,13 +334,13 @@ test('Fail gracefully if fetching template from disk fails', function (t) {
 });
 
 test('Fail gracefully if req.urlParsed does not get set', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
-		app = new App({'log': log});
+		app = new App({log: log});
 
 		// Inject custom middleware to delete req.urlParsed
 		app.middleware.splice(1, 0, function (req, res, cb) {
@@ -359,8 +359,8 @@ test('Fail gracefully if req.urlParsed does not get set', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	500);
-			t.equal(body,	'500 Internal Server Error');
+			t.equal(response.statusCode, 500);
+			t.equal(body, '500 Internal Server Error');
 			cb();
 		});
 	});
@@ -377,15 +377,15 @@ test('Fail gracefully if req.urlParsed does not get set', function (t) {
 });
 
 test('Return static file contents', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/simple_app'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/simple_app'},
+			log: log
 		});
 		cb();
 	});
@@ -398,8 +398,8 @@ test('Return static file contents', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/womp.txt', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'wamp\n');
+			t.equal(response.statusCode, 200);
+			t.equal(body, 'wamp\n');
 			cb();
 		});
 	});
@@ -416,15 +416,15 @@ test('Return static file contents', function (t) {
 });
 
 test('Get static json file', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/simple_app'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/simple_app'},
+			log: log
 		});
 		cb();
 	});
@@ -437,8 +437,8 @@ test('Get static json file', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/file.json', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(JSON.stringify(JSON.parse(body)),	'{"maff":"lon"}');
+			t.equal(response.statusCode, 200);
+			t.equal(JSON.stringify(JSON.parse(body)), '{"maff":"lon"}');
 			cb();
 		});
 	});
@@ -455,15 +455,15 @@ test('Get static json file', function (t) {
 });
 
 test('Request static json and return 500 on router failure', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/simple_app'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/simple_app'},
+			log: log
 		});
 		cb();
 	});
@@ -480,8 +480,8 @@ test('Request static json and return 500 on router failure', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/file.json', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	500);
-			t.equal(body,	'500 Internal Server Error');
+			t.equal(response.statusCode, 500);
+			t.equal(body, '500 Internal Server Error');
 			cb();
 		});
 	});
@@ -498,17 +498,17 @@ test('Request static json and return 500 on router failure', function (t) {
 });
 
 test('Fail gracefully if a static file can not be fetched', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
-		app = new App({'log': log});
+		app = new App({log: log});
 
 		// Inject middleware to screw with routed file to trigger the error we are after
 		app.middleware.splice(2, 0, function (req, res, cb) {
-			req.routed.staticFullPath	= '/somewhere/that/does/not/exist.txt';
+			req.routed.staticFullPath = '/somewhere/that/does/not/exist.txt';
 			cb();
 		});
 
@@ -523,8 +523,8 @@ test('Fail gracefully if a static file can not be fetched', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/womp.txt', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	500);
-			t.equal(body,	'500 Internal Server Error');
+			t.equal(response.statusCode, 500);
+			t.equal(body, '500 Internal Server Error');
 			cb();
 		});
 	});
@@ -541,15 +541,15 @@ test('Fail gracefully if a static file can not be fetched', function (t) {
 });
 
 test('Fail gracefully when controller data is non-stringable', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/simple_app'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/simple_app'},
+			log: log
 		});
 		cb();
 	});
@@ -562,8 +562,8 @@ test('Fail gracefully when controller data is non-stringable', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/fail', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	500);
-			t.equal(body,	'500 Internal Server Error');
+			t.equal(response.statusCode, 500);
+			t.equal(body, '500 Internal Server Error');
 			cb();
 		});
 	});
@@ -580,15 +580,15 @@ test('Fail gracefully when controller data is non-stringable', function (t) {
 });
 
 test('Send data from controller that is already stringified', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/simple_app'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/simple_app'},
+			log: log
 		});
 		cb();
 	});
@@ -601,8 +601,8 @@ test('Send data from controller that is already stringified', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/noobj', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'bosse');
+			t.equal(response.statusCode, 200);
+			t.equal(body, 'bosse');
 			cb();
 		});
 	});
@@ -619,15 +619,15 @@ test('Send data from controller that is already stringified', function (t) {
 });
 
 test('Render page where templates are in modules', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/templates_in_modules'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			log: log
 		});
 		cb();
 	});
@@ -640,8 +640,8 @@ test('Render page where templates are in modules', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/foo', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t<title>Base</title>\n</head>\n\n\t<body>\n\t\t<h1>skabb</h1>\n<p>Giant squirrel</p>\n\t</body>\n</html>\n');
+			t.equal(response.statusCode, 200);
+			t.equal(body, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t<title>Base</title>\n</head>\n\n\t<body>\n\t\t<h1>skabb</h1>\n<p>Giant squirrel</p>\n\t</body>\n</html>\n');
 			cb();
 		});
 	});
@@ -658,15 +658,15 @@ test('Render page where templates are in modules', function (t) {
 });
 
 test('Render page, check exact path and fail without crashing', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/templates_in_modules'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			log: log
 		});
 		cb();
 	});
@@ -679,8 +679,8 @@ test('Render page, check exact path and fail without crashing', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/abs', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	500);
-			t.equal(body,	'500 Internal Server Error');
+			t.equal(response.statusCode, 500);
+			t.equal(body, '500 Internal Server Error');
 			cb();
 		});
 	});
@@ -697,15 +697,15 @@ test('Render page, check exact path and fail without crashing', function (t) {
 });
 
 test('Render page, check relative path and fail', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/templates_in_modules'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			log: log
 		});
 		cb();
 	});
@@ -718,8 +718,8 @@ test('Render page, check relative path and fail', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/lurk', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	500);
-			t.equal(body,	'500 Internal Server Error');
+			t.equal(response.statusCode, 500);
+			t.equal(body, '500 Internal Server Error');
 			cb();
 		});
 	});
@@ -736,15 +736,15 @@ test('Render page, check relative path and fail', function (t) {
 });
 
 test('Fail to compile template, but do not crash', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/templates_in_modules'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			log: log
 		});
 		cb();
 	});
@@ -757,8 +757,8 @@ test('Fail to compile template, but do not crash', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/mekk', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	500);
-			t.equal(body,	'500 Internal Server Error');
+			t.equal(response.statusCode, 500);
+			t.equal(body, '500 Internal Server Error');
 			cb();
 		});
 	});
@@ -775,15 +775,15 @@ test('Fail to compile template, but do not crash', function (t) {
 });
 
 test('Fail when rendering page due to circular includes', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/templates_in_modules'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			log: log
 		});
 		cb();
 	});
@@ -796,8 +796,8 @@ test('Fail when rendering page due to circular includes', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/bah', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	500);
-			t.equal(body,	'500 Internal Server Error');
+			t.equal(response.statusCode, 500);
+			t.equal(body, '500 Internal Server Error');
 			cb();
 		});
 	});
@@ -814,15 +814,15 @@ test('Fail when rendering page due to circular includes', function (t) {
 });
 
 test('Fail when parsing arguments for include, but do not crash', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/templates_in_modules'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			log: log
 		});
 		cb();
 	});
@@ -835,8 +835,8 @@ test('Fail when parsing arguments for include, but do not crash', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/ass', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	500);
-			t.equal(body,	'500 Internal Server Error');
+			t.equal(response.statusCode, 500);
+			t.equal(body, '500 Internal Server Error');
 			cb();
 		});
 	});
@@ -853,15 +853,15 @@ test('Fail when parsing arguments for include, but do not crash', function (t) {
 });
 
 test('Render page with included files containing dots in the file name', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/templates_in_modules'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/templates_in_modules'},
+			log: log
 		});
 		cb();
 	});
@@ -874,8 +874,8 @@ test('Render page with included files containing dots in the file name', functio
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/asd', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t<title>Base</title>\n</head>\n\n\t<body>\n\t\t<h1>skabb</h1>\n<p>Giant squirrel</p>\n\t</body>\n</html>\n');
+			t.equal(response.statusCode, 200);
+			t.equal(body, '<!DOCTYPE html>\n<html lang="en">\n\t<head>\n\t<title>Base</title>\n</head>\n\n\t<body>\n\t\t<h1>skabb</h1>\n<p>Giant squirrel</p>\n\t</body>\n</html>\n');
 			cb();
 		});
 	});
@@ -892,15 +892,15 @@ test('Render page with included files containing dots in the file name', functio
 });
 
 test('Render page when templates in subfolders uses includes', function (t) {
-	const	tasks	= [];
+	const tasks = [];
 
-	let	app;
+	let app;
 
 	// Initialize app
 	tasks.push(function (cb) {
 		app = new App({
-			'routerOptions':	{'basePath': __dirname + '/../test_environments/includes'},
-			'log':	log
+			routerOptions: {basePath: __dirname + '/../test_environments/includes'},
+			log: log
 		});
 		cb();
 	});
@@ -913,8 +913,8 @@ test('Render page when templates in subfolders uses includes', function (t) {
 	tasks.push(function (cb) {
 		request('http://localhost:' + app.base.httpServer.address().port + '/test/untz', function (err, response, body) {
 			if (err) return cb(err);
-			t.equal(response.statusCode,	200);
-			t.equal(body,	'<html>\n\t<head><title>test</title></head>\n\t<body>\n\t\t<h1>This should be visible</h1>\n<p>boo</p>\n\t\t<p>torsk</p>\n\t</body>\n</html>');
+			t.equal(response.statusCode, 200);
+			t.equal(body, '<html>\n\t<head><title>test</title></head>\n\t<body>\n\t\t<h1>This should be visible</h1>\n<p>boo</p>\n\t\t<p>torsk</p>\n\t</body>\n</html>');
 			cb();
 		});
 	});
