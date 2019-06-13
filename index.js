@@ -333,7 +333,11 @@ App.prototype.mwRunController = function mwRunController(req, res, cb) {
 		that.noTargetFound(req, res, cb);
 	} else { // Must be a controller here
 		that.log.debug(logPrefix + 'Controller found, running');
-		require(req.routed.controllerFullPath)(req, res, cb);
+		try {
+			require(req.routed.controllerFullPath)(req, res, cb);
+		} catch (err) {
+			that.log.error(logPrefix + 'Got exception when trying to run controller: ' + req.routed.controllerFullPath + ' (are you sure that module.exports is a function in the controller?), err: ' + err.message);
+		}
 	}
 };
 
