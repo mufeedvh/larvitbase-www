@@ -37,7 +37,7 @@
     "send": "^0.16.1"
   },
   "devDependencies": {
-    "async": "2.6.3",
+    "async": "3.2.0",
     "coveralls": "3.0.9",
     "eslint": "5.16.0",
     "istanbul": "0.4.5",
