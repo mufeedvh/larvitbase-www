@@ -50,6 +50,7 @@ function App(options) {
 	// Only set middleware array if none is provided from the initiator
 	if (!Array.isArray(options.baseOptions.middleware)) {
 		options.baseOptions.middleware = [
+			function mwValidateRoute(req, res, cb) { that.mwValidateRoute(req, res, cb); },
 			function mwParse(req, res, cb) { that.mwParse(req, res, cb); },
 			function mwRoute(req, res, cb) { that.mwRoute(req, res, cb); },
 			function mwSendStatic(req, res, cb) { that.mwSendStatic(req, res, cb); },
@@ -90,6 +91,18 @@ App.prototype.noTargetFound = function noTargetFound(req, res, cb) {
 		cb();
 	});
 };
+
+App.prototype.mwValidateRoute = function mwValidateRoute(req, res, cb) {
+	const logPrefix = req.logPrefix + 'mwValidateRoute() - ';
+	const that = this;
+
+	// validating if the requested path contains path traversing characters to prevent directory traversal
+	var reqPath = decodeURI(req.url);
+	if (reqPath.includes('..')) {
+		that.log.verbose(logPrefix + 'Requested file outside the process directory (Directory Traversal Attempt).');
+		that.noTargetFound(req, res, cb);
+	}
+}
 
 // Cleanup middleware, removing tmp file storage and more
 App.prototype.mwCleanup = function mwCleanup(req, res, cb) {
